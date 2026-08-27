@@ -265,6 +265,30 @@ def wordmark_data_uri():
 
 st.markdown("""
 <style>
+/* Tabloyu ve Hücreleri Beyaz, Başlıkları Aygaz Mavisi Yap */
+table, table *, .dataframe, .dataframe *, [data-testid="stTable"] * {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+
+table th, .dataframe th, [data-testid="stTable"] th {
+    background-color: #005696 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 10px 12px !important;
+    border: none !important;
+}
+
+table td, .dataframe td, [data-testid="stTable"] td {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+table tr:hover td, .dataframe tr:hover td {
+    background-color: #f1f5f9 !important;
+}
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 :root { --ink:#17232d; --muted:#687984; --line:#d8e2e8; --paper:#f5f8fa; --white:#fff; --aygaz:#0072bc; --aygaz-dark:#005b94; --teal:#147d72; --orange:#d47d36; }
 html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
