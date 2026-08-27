@@ -18,6 +18,35 @@ CURRENT_YEAR = datetime.now().year
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
+/* Tablo Zeminini Beyaz, Başlıkları Aygaz Mavisi Yap */
+table {
+    width: 100% !important;
+    background-color: #ffffff !important;
+    border-collapse: collapse !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}
+
+table th {
+    background-color: #005696 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 10px 12px !important;
+    text-align: left !important;
+    border: none !important;
+}
+
+table td {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    font-size: 14px !important;
+}
+
+table tr:hover td {
+    background-color: #f8fafc !important;
+}
 /* Sol Sidebar Kullanıcı Seçim Kutusu Arka Planı */
 [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
 [data-testid="stSidebar"] div[data-baseweb="select"] > div {
