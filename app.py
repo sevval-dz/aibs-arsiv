@@ -739,8 +739,6 @@ elif menu == "İş kuyruğu":
             )
 
         with u3:
-            st.markdown("<br>")
-
             if is_admin:
                 if st.button(
                     "Güncelle",
