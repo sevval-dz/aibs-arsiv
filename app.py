@@ -511,7 +511,7 @@ with st.sidebar:
         label_visibility="visible"
     )
 
-        active_row = users_df.iloc[user_labels.index(selected_user)]
+    active_row = users_df.iloc[user_labels.index(selected_user)]
     active_name = active_row["full_name"]
     active_unit = active_row["unit_code"]
     active_user = active_row["username"]
