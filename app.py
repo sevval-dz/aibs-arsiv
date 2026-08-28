@@ -18,7 +18,7 @@ CURRENT_YEAR = datetime.now().year
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
-/* 1. Tüm Butonlar ve Excel İndirme Butonları (Tek Renk Mavi Zemin) */
+/* 1. Tüm Butonlar (Arka plan ve çerçeve sabitleme) */
 div.stButton, div[data-testid="stButton"], 
 div.stDownloadButton, div[data-testid="stDownloadButton"] {
     background: transparent !important;
@@ -39,11 +39,17 @@ div[data-testid="stDownloadButton"] > button {
     box-shadow: none !important;
 }
 
-/* Buton içindeki tüm yazıların net BEYAZ olması */
-div.stButton > button *,
-div[data-testid="stButton"] > button *,
-div.stDownloadButton > button *,
-div[data-testid="stDownloadButton"] > button * {
+/* 2. Buton İçindeki Yazılar (Kesin Beyaz Renk) */
+div.stButton > button p,
+div[data-testid="stButton"] > button p,
+div.stDownloadButton > button p,
+div[data-testid="stDownloadButton"] > button p,
+div.stButton > button span,
+div[data-testid="stButton"] > button span,
+div.stDownloadButton > button span,
+div[data-testid="stDownloadButton"] > button span,
+div.stButton > button div,
+div[data-testid="stButton"] > button div {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
 }
@@ -56,7 +62,7 @@ div[data-testid="stDownloadButton"] > button:hover {
     background-color: #004070 !important;
 }
 
-/* 2. Kullanıcı Kutusu ve Metin Girdi Alanları (Beyaz Zemin, Koyu Yazı) */
+/* 3. Form Girdi Alanları (Beyaz Zemin, Koyu Yazı) */
 div[data-baseweb="select"] input,
 div[data-baseweb="select"] span,
 div[data-baseweb="select"] div,
