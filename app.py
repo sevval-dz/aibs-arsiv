@@ -18,7 +18,7 @@ CURRENT_YEAR = datetime.now().year
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
-/* 1. TÜM BUTONLAR (Normal Butonlar, Form Gönder Butonları, İndirme Butonları) */
+/* 1. TÜM BUTONLAR (Mavi zemin, beyaz yazı - sabit) */
 div.stButton, div[data-testid="stButton"], 
 div.stDownloadButton, div[data-testid="stDownloadButton"],
 div.stFormSubmitButton, div[data-testid="stFormSubmitButton"] {
@@ -44,7 +44,6 @@ button[data-testid^="baseButton"] {
     box-shadow: none !important;
 }
 
-/* Tüm butonların içindeki metinleri kesin BEYAZ yap */
 div.stButton > button *,
 div[data-testid="stButton"] > button *,
 div.stDownloadButton > button *,
@@ -56,7 +55,6 @@ button[data-testid^="baseButton"] * {
     -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Buton Hover (Üzerine gelindiğinde) */
 div.stButton > button:hover,
 div[data-testid="stButton"] > button:hover,
 div.stDownloadButton > button:hover,
@@ -66,30 +64,31 @@ div[data-testid="stFormSubmitButton"] > button:hover,
 button[data-testid^="baseButton"]:hover {
     background-color: #004070 !important;
     background: #004070 !important;
-    border: none !important;
 }
 
-/* 2. KULLANICI KUTUSU & FORM GİRDİLERİ */
+/* 2. KULLANICI KUTUSU & GİRDİ ALANLARI (Beyaz zemin, SİYAH yazı, görünür ok) */
 div[data-baseweb="select"] > div,
 div[data-testid="stTextInput"] > div > div {
     background-color: #ffffff !important;
     border-radius: 6px !important;
 }
 
-div[data-baseweb="select"] span,
-div[data-baseweb="select"] input,
-div[data-testid="stTextInput"] input {
-    color: #1e293b !important;
-    -webkit-text-fill-color: #1e293b !important;
+/* Kutunun içindeki ismi kesin olarak SİYAH yap */
+div[data-baseweb="select"] *,
+div[data-testid="stSelectbox"] *,
+div[data-testid="stTextInput"] input,
+input, select, textarea {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
 }
 
-/* Kullanıcı kutusunun sağındaki açılır oku (chevron) geri getirme */
+/* Sağdaki açılır oku koru ve siyah yap */
 div[data-baseweb="select"] svg,
 div[data-testid="stSelectbox"] svg {
     display: block !important;
     visibility: visible !important;
-    fill: #1e293b !important;
-    color: #1e293b !important;
+    fill: #000000 !important;
+    color: #000000 !important;
 }
 </style>
 """, unsafe_allow_html=True)
