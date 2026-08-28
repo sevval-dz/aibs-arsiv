@@ -555,9 +555,9 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-        st.caption(
-        datetime.now().strftime(
-            "Son senkronizasyon  %d.%m.%Y · %H:%M"
+     st.caption(
+         datetime.now().strftime(
+              "Son senkronizasyon  %d.%m.%Y · %H:%M"
         )
     )
     
