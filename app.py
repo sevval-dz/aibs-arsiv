@@ -184,17 +184,28 @@ def init_database():
 
     connection.commit()
     connection.close()
-def mark_record_as_destroyed(record_no):
+def mark_record_as_destroyed(record_no, user):
     conn = get_db()
     cursor = conn.cursor()
+
     today_str = datetime.now().strftime("%d.%m.%Y")
+
     cursor.execute("""
         UPDATE aygaz_main_archive 
-        SET destruction_status = 'İMHA EDİLDİ', destruction_date = ? 
+        SET destruction_status = 'İMHA EDİLDİ',
+            destruction_date = ?
         WHERE doc_reg_no = ?
     """, (today_str, str(record_no)))
+
     conn.commit()
     conn.close()
+
+    audit(
+        user,
+        "Belge imha",
+        f"Kayıt No {record_no} · İMHA EDİLDİ · {today_str}"
+    )
+
     st.cache_data.clear()
 
 def get_destroyed_records(year_filter=None):
@@ -693,7 +704,7 @@ elif menu == "Saklama ve imha" and is_admin:
                 st.write("")
                 st.write("")
                 if st.button("İmha Edildi Olarak İşaretle", type="primary", use_container_width=True):
-                    mark_record_as_destroyed(selected_record)
+                    mark_record_as_destroyed(selected_record, active_user)
                     st.success(f"Kayıt No {selected_record} başarıyla imha edildi olarak işaretlendi.")
                     st.rerun()
         else:
