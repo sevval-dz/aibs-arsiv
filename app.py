@@ -523,12 +523,14 @@ with st.sidebar:
     menu_options = ["Katalog", "İş kuyruğu"]
 
     if is_admin:
-        menu_options.extend([
-            "Tanımlar",
-            "Saklama ve imha",
-            "Günlükler",
-            "Denetim izi"
-        ])
+    menu_options.extend([
+        "Tanımlar",
+        "Saklama ve imha",
+        "Günlükler"
+    ])
+
+if can_view_audit(active_row):
+    menu_options.append("Denetim izi")
 
     menu = st.radio(
         "Çalışma alanı",
