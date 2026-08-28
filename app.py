@@ -511,16 +511,22 @@ with st.sidebar:
         label_visibility="visible"
     )
 
-    active_row = users_df.iloc[user_labels.index(selected_user)]
+        active_row = users_df.iloc[user_labels.index(selected_user)]
     active_name = active_row["full_name"]
     active_unit = active_row["unit_code"]
     active_user = active_row["username"]
     is_admin = is_admin_user(active_row)
 
-    st.caption(f"{active_row['role_desc']} · {active_unit}")
+    st.caption(
+        f"{active_row['role_desc']} · {active_unit}"
+    )
+
     st.markdown("---")
 
-    menu_options = ["Katalog", "İş kuyruğu"]
+    menu_options = [
+        "Katalog",
+        "İş kuyruğu"
+    ]
 
     if is_admin:
         menu_options.extend([
@@ -539,36 +545,7 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.caption("Sistem durumu")
 
-    st.caption(f"{active_row['role_desc']} · {active_unit}")
-    st.markdown("---")
-
-    menu_options = ["Katalog", "İş kuyruğu"]
-
-   if is_admin:
-        menu_options.extend([
-            "Tanımlar",
-            "Saklama ve imha",
-            "Günlükler"
-        ])
-
-    if can_view_audit(active_row):
-        menu_options.append("Denetim izi")
-
-    menu = st.radio(
-        "Çalışma alanı",
-        menu_options,
-        label_visibility="visible"
-    )
-
-    menu = st.radio(
-        "Çalışma alanı",
-        menu_options,
-        label_visibility="visible"
-    )
-
-    st.markdown("---")
     st.caption("Sistem durumu")
 
     st.markdown(
@@ -580,6 +557,9 @@ with st.sidebar:
 
     st.caption(
         datetime.now().strftime(
+            "Son senkronizasyon  %d.%m.%Y · %H:%M"
+        )
+    )
             "Son senkronizasyon  %d.%m.%Y · %H:%M"
         )
     )
