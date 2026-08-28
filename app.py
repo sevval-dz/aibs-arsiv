@@ -653,14 +653,20 @@ elif menu == "Tanımlar" and is_admin:
 
 elif menu == "İş kuyruğu":
     header("İş kuyruğu", "Erişim taleplerini önceliklendir, hazırla ve iz bırak.")
-    if is_admin:
-    filter_sql = ""
-    filter_params = ()
-else:
-    filter_sql = " AND requester = ?"
-    filter_params = (active_name,)
+        filter_sql = " AND requester = ?" if not is_admin else ""
+    filter_params = (active_name,) if not is_admin else ()
 
-queue_df = read_df(
+    queue_df = read_df(
+        "SELECT id, req_no AS [Talep], requester AS [Talep Eden], "
+        "unit_code AS [Birim], doc_item AS [Kayıt], "
+        "delivery_type AS [Teslim], urgency AS [Öncelik], "
+        "status AS [Durum], created_at AS [Oluşturuldu], "
+        "notes AS [Not] "
+        "FROM archive_requests "
+        "WHERE 1=1" + filter_sql +
+        " ORDER BY id DESC",
+        filter_params
+    )
     "SELECT id, req_no AS [Talep], requester AS [Talep Eden], "
     "unit_code AS [Birim], doc_item AS [Kayıt], "
     "delivery_type AS [Teslim], urgency AS [Öncelik], "
