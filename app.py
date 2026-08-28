@@ -576,57 +576,61 @@ elif menu == "İş kuyruğu":
                 audit(active_user, "Talep mesajı", f"{selected_request} talebine mesaj eklendi")
                 st.rerun()
 elif menu == "Saklama ve imha":
-        st.markdown("### 🗄️ Saklama ve İmha Yönetimi")
+    st.markdown("### Saklama ve İmha Yönetimi")
 
-        tab1, tab2 = st.tabs(["⏳ Süresi Dolanlar (İmha Bekleyenler)", "✅ İmha Edilen Belgeler Arşivi"])
+    tab1, tab2 = st.tabs(["Süresi Dolanlar (İmha Bekleyenler)", "İmha Edilen Belgeler Arşivi"])
 
-        with tab1:
-            st.markdown("#### İmha Edilecek Belgeler Listesi")
-            conn = get_db()
-            pending_df = pd.read_sql_query("""
-                SELECT doc_reg_no AS 'Kayıt No', doc_no AS 'Dosya No', doc_name AS 'Belge Adı', 
-                       unit_code AS 'Birim', retention_end_year AS 'İmha Yılı', destruction_status AS 'Durum'
-                FROM aygaz_main_archive 
-                WHERE (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') 
-                AND CAST(retention_end_year AS INTEGER) <= 2026
-            """, conn)
-            conn.close()
+    with tab1:
+        st.markdown("#### İmha Edilecek Belgeler Listesi")
+        conn = get_db()
+        pending_df = pd.read_sql_query("""
+            SELECT doc_reg_no AS 'Kayıt No', 
+                   doc_no AS 'Dosya No', 
+                   doc_name AS 'Belge Adı', 
+                   unit_code AS 'Birim', 
+                   retention_end_year AS 'İmha Yılı', 
+                   destruction_status AS 'Durum'
+            FROM aygaz_main_archive 
+            WHERE (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') 
+            AND CAST(retention_end_year AS INTEGER) <= 2026
+        """, conn)
+        conn.close()
 
-            if not pending_df.empty:
-                st.dataframe(pending_df, use_container_width=True)
-                
-                st.markdown("---")
-                st.markdown("**Tek Komutla İmha İşlemi**")
-                col_sel, col_btn = st.columns([3, 1])
-                with col_sel:
-                    selected_record = st.selectbox("İmha edilecek belgeyi seçin:", pending_df["Kayıt No"].tolist())
-                with col_btn:
-                    st.write("")
-                    st.write("")
-                    if st.button("🗑️ İmha Edildi Olarak İşaretle", type="primary"):
-                        mark_record_as_destroyed(selected_record)
-                        st.success(f"Kayıt No {selected_record} başarıyla imha edildi olarak işaretlendi ve günün tarihi mühürlendi!")
-                        st.rerun()
-            else:
-                st.info("İmha süresi dolmuş bekleyen belge bulunmamaktadır.")
-
-        with tab2:
-            st.markdown("#### 2026 Yılı İmha Tutanağı ve Arşivi")
-            destroyed_df = get_destroyed_records(year_filter="2026")
+        if not pending_df.empty:
+            st.dataframe(pending_df, use_container_width=True)
             
-            if not destroyed_df.empty:
-                destroyed_df.columns = ['Kayıt No', 'Dosya No', 'Belge Adı', 'Birim', 'İlk Tarih', 'Saklama Süresi', 'İmha Yılı', 'İmha Tarihi', 'Durum']
-                st.dataframe(destroyed_df, use_container_width=True)
-                
-                excel_data = convert_df_to_excel(destroyed_df)
-                st.download_button(
-                    label="📥 2026 İmha Edilen Belgeler Listesini İndir (Excel)",
-                    data=excel_data,
-                    file_name="Aygaz_Imha_Edilen_Belgeler_2026.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            else:
-                st.info("2026 yılı için henüz imha edilmiş bir belge kaydı bulunmuyor.")
+            st.markdown("---")
+            st.markdown("**İmha İşlemi Onayı**")
+            col_sel, col_btn = st.columns([3, 1])
+            with col_sel:
+                selected_record = st.selectbox("İmha edilecek belgeyi seçin:", pending_df["Kayıt No"].tolist())
+            with col_btn:
+                st.write("")
+                st.write("")
+                if st.button("İmha Edildi Olarak İşaretle", type="primary", use_container_width=True):
+                    mark_record_as_destroyed(selected_record)
+                    st.success(f"Kayıt No {selected_record} başarıyla imha edildi olarak işaretlendi.")
+                    st.rerun()
+        else:
+            st.info("İmha süresi dolmuş bekleyen belge bulunmamaktadır.")
+
+    with tab2:
+        st.markdown("#### 2026 Yılı İmha Tutanağı ve Arşivi")
+        destroyed_df = get_destroyed_records(year_filter="2026")
+        
+        if not destroyed_df.empty:
+            st.dataframe(destroyed_df, use_container_width=True)
+            
+            excel_data = convert_df_to_excel(destroyed_df)
+            st.download_button(
+                label="2026 İmha Edilen Belgeler Listesini İndir (Excel)",
+                data=excel_data,
+                file_name="Aygaz_Imha_Edilen_Belgeler_2026.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        else:
+            st.info("2026 yılı için henüz imha edilmiş bir belge kaydı bulunmuyor.")
 elif menu == "Günlükler":
     header("Yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
     unit_report = read_df("SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt], SUM(CASE WHEN status = 'Zimmette' THEN 1 ELSE 0 END) AS [Zimmette], SUM(CASE WHEN retention_end_year <= ? AND destruction_status != 'Edildi' THEN 1 ELSE 0 END) AS [Süre riski] FROM aygaz_main_archive GROUP BY unit_code ORDER BY [Kayıt] DESC", (CURRENT_YEAR,))
