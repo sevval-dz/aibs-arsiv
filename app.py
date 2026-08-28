@@ -549,7 +549,12 @@ if menu == "Katalog":
         params = []
         if active_unit != "ALL": query += " AND unit_code = ?"; params.append(active_unit)
         if search.strip(): query += " AND (doc_reg_no LIKE ? OR doc_no LIKE ? OR doc_name LIKE ? OR box_no LIKE ? OR shelf_no LIKE ?)"; params.extend([f"%{search.strip()}%"] * 5)
-        if status != "Tümü": query += " AND status = ?"; params.append(status)
+                if status == "İmha Listesinde":
+            query += " AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') AND CAST(retention_end_year AS INTEGER) <= ?"
+            params.append(CURRENT_YEAR)
+        elif status != "Tümü":
+            query += " AND status = ?"
+            params.append(status)
         if unit.strip() and active_unit == "ALL": query += " AND unit_code LIKE ?"; params.append(f"%{unit.strip()}%")
         catalog_df = read_df(query + " ORDER BY id DESC LIMIT ?", params + [limit])
         st.dataframe(catalog_df, width="stretch", hide_index=True, height=390)
