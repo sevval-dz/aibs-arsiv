@@ -976,7 +976,7 @@ elif menu == "Günlükler" and is_admin:
         download_excel("Aylık Excel indir", monthly_report, "aygaz-aylik-kayitlar.xlsx", "Aylık Kayıtlar")
     download_excel("Yönetim raporunu indir", unit_report, "aygaz-arsiv-yonetim-raporu.xlsx", "Birim Raporu", {"Durum Raporu": status_report})
 
-elif menu == "Denetim izi" and is_admin:
+elif menu == "Denetim izi" and can_view_audit(active_row):
     header("Denetim izi", "Arşivde kim, ne zaman, hangi kararı verdi?")
     audit_df = read_df("SELECT timestamp AS [Zaman], user AS [Kullanıcı], action_type AS [İşlem], details AS [Detay] FROM archive_audit ORDER BY id DESC LIMIT 250")
     st.markdown('<div class="hint">Bu akış kullanıcı işlemlerini gösterir. Talep değişiklikleri ve erişim talepleri zaman damgasıyla tutulur.</div>', unsafe_allow_html=True)
