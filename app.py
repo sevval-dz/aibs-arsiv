@@ -669,16 +669,16 @@ elif menu == "Saklama ve imha" and is_admin:
         st.markdown("#### İmha Edilecek Belgeler Listesi")
         conn = get_db()
         pending_df = pd.read_sql_query("""
-            SELECT doc_reg_no AS 'Kayıt No', 
-                   doc_no AS 'Dosya No', 
-                   doc_name AS 'Belge Adı', 
-                   unit_code AS 'Birim', 
-                   retention_end_year AS 'İmha Yılı', 
-                   destruction_status AS 'Durum'
-            FROM aygaz_main_archive 
-            WHERE (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') 
-            AND CAST(retention_end_year AS INTEGER) <= 2026
-        """, conn)
+    SELECT doc_reg_no AS 'Kayıt No', 
+           doc_no AS 'Dosya No', 
+           doc_name AS 'Belge Adı', 
+           unit_code AS 'Birim', 
+           retention_end_year AS 'İmha Yılı', 
+           destruction_status AS 'Durum'
+    FROM aygaz_main_archive 
+    WHERE (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') 
+    AND CAST(retention_end_year AS INTEGER) <= ?
+""", conn, params=(CURRENT_YEAR,))
         conn.close()
 
         if not pending_df.empty:
