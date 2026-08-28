@@ -193,7 +193,6 @@ def init_database():
     connection.commit()
     connection.close()
 def mark_record_as_destroyed(record_no):
-    """Belgeyi tek tıkla günün tarihiyle imha edildi olarak işaretler"""
     conn = get_db()
     cursor = conn.cursor()
     today_str = datetime.now().strftime("%d.%m.%Y")
@@ -207,23 +206,29 @@ def mark_record_as_destroyed(record_no):
     st.cache_data.clear()
 
 def get_destroyed_records(year_filter=None):
-    """İmha edilen belgeleri listeler"""
     conn = get_db()
-    query = "SELECT doc_reg_no, doc_no, doc_name, unit_code, first_date, retention_period, retention_end_year, destruction_date, destruction_status FROM aygaz_main_archive WHERE destruction_status = 'İMHA EDİLDİ'"
+    query = """
+        SELECT doc_reg_no AS 'Kayıt No', 
+               doc_no AS 'Dosya No', 
+               doc_name AS 'Belge Adı', 
+               unit_code AS 'Birim', 
+               retention_end_year AS 'İmha Yılı', 
+               destruction_date AS 'İmha Tarihi', 
+               destruction_status AS 'Durum' 
+        FROM aygaz_main_archive 
+        WHERE destruction_status = 'İMHA EDİLDİ'
+    """
     if year_filter:
-        query += f" AND (destruction_date LIKE '%{year_filter}' OR retention_end_year = '{year_filter}')"
+        query += f" AND (destruction_date LIKE '%{year_filter}%' OR retention_end_year = '{year_filter}')"
     df = pd.read_sql_query(query, conn)
     conn.close()
     return df
 
 def convert_df_to_excel(df):
-    """Toplu Excel çıktısı üretir"""
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='İmha Edilen Belgeler')
+        df.to_excel(writer, index=False, sheet_name='Imha_Listesi')
     return output.getvalue()
-
-
 def read_df(query, params=()):
     connection = get_db()
     try:
