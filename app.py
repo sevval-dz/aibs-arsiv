@@ -547,15 +547,23 @@ if menu == "Katalog":
         with f3: limit = st.selectbox("Görünüm", [25, 50, 100])
         query = "SELECT doc_reg_no AS [Kayıt No], doc_no AS [Dosya No], doc_name AS [Belge], series_code AS [Seri], unit_code AS [Birim], first_doc_date AS [İlk Evrak Tarihi], last_doc_date AS [Son Evrak Tarihi], box_no AS [Kutu No], shelf_no AS [Yer No], institution AS [Kurum], status AS [Durum], destruction_status AS [İmha Durumu], retention_end_year AS [Saklama Sonu] FROM aygaz_main_archive WHERE 1=1"
         params = []
-        if active_unit != "ALL": query += " AND unit_code = ?"; params.append(active_unit)
-        if search.strip(): query += " AND (doc_reg_no LIKE ? OR doc_no LIKE ? OR doc_name LIKE ? OR box_no LIKE ? OR shelf_no LIKE ?)"; params.extend([f"%{search.strip()}%"] * 5)
-                if status == "İmha Listesinde":
+        if active_unit != "ALL": 
+            query += " AND unit_code = ?"; 
+            params.append(active_unit)
+        
+        if search.strip(): 
+            query += " AND (doc_reg_no LIKE ? OR doc_no LIKE ? OR doc_name LIKE ? OR box_no LIKE ? OR shelf_no LIKE ?)"; 
+            params.extend([f"%{search.strip()}%"] * 5)
+        if status == "İmha Listesinde":
             query += " AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') AND CAST(retention_end_year AS INTEGER) <= ?"
             params.append(CURRENT_YEAR)
         elif status != "Tümü":
             query += " AND status = ?"
             params.append(status)
-        if unit.strip() and active_unit == "ALL": query += " AND unit_code LIKE ?"; params.append(f"%{unit.strip()}%")
+            
+        if unit.strip() and active_unit == "ALL": 
+            query += " AND unit_code LIKE ?"; 
+            params.append(f"%{unit.strip()}%")
         catalog_df = read_df(query + " ORDER BY id DESC LIMIT ?", params + [limit])
         st.dataframe(catalog_df, width="stretch", hide_index=True, height=390)
         st.caption(f"{len(catalog_df)} kayıt gösteriliyor · Filtreler doğrudan arşiv kataloğuna uygulanıyor")
