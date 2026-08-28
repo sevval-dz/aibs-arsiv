@@ -1,6 +1,5 @@
 from datetime import datetime
 import base64
-import getpass
 import io
 import os
 from pathlib import Path
@@ -13,16 +12,16 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Aygaz Dijital Arşiv",
+    page_title="Aygaz Arşiv Sistemi",
     page_icon="Aygaz.png",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
 
 CURRENT_YEAR = datetime.now().year
 
-st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
 /* 1. TÜM BUTONLAR (Mavi zemin, beyaz yazı - sabit) */
@@ -396,7 +395,10 @@ with st.sidebar:
     menu = st.radio("Çalışma alanı", menu_options, label_visibility="collapsed")
     st.markdown("---")
     st.caption("Sistem durumu")
-    st.markdown("🟢  Veritabanı bağlı", unsafe_allow_html=True)
+    st.markdown(
+    '<div style="color:#ffffff;font-size:12px;font-weight:600;">Veritabanı bağlı</div>',
+    unsafe_allow_html=True
+)
     st.caption(datetime.now().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M"))
 
 user_initial = active_name[:1].upper() if active_name else "K"
