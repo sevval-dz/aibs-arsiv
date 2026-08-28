@@ -555,12 +555,11 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-     st.caption(
-         datetime.now().strftime(
-              "Son senkronizasyon  %d.%m.%Y · %H:%M"
+    st.caption(
+        datetime.now().strftime(
+            "Son senkronizasyon  %d.%m.%Y · %H:%M"
         )
     )
-    
 
 
 user_initial = active_name[:1].upper() if active_name else "K"
