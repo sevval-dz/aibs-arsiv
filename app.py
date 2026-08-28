@@ -700,8 +700,8 @@ elif menu == "Saklama ve imha" and is_admin:
             st.info("İmha süresi dolmuş bekleyen belge bulunmamaktadır.")
 
     with tab2:
-        st.markdown("#### 2026 Yılı İmha Tutanağı ve Arşivi")
-        destroyed_df = get_destroyed_records(year_filter="2026")
+        st.markdown(f"#### {CURRENT_YEAR} Yılı İmha Tutanağı ve Arşivi")
+        destroyed_df = get_destroyed_records(year_filter=str(CURRENT_YEAR))
         
         if not destroyed_df.empty:
             st.dataframe(destroyed_df, use_container_width=True)
@@ -710,12 +710,14 @@ elif menu == "Saklama ve imha" and is_admin:
             st.download_button(
                 label="2026 İmha Edilen Belgeler Listesini İndir (Excel)",
                 data=excel_data,
-                file_name="Aygaz_Imha_Edilen_Belgeler_2026.xlsx",
+                file_name=f"Aygaz_Imha_Edilen_Belgeler_{CURRENT_YEAR}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
         else:
-            st.info("2026 yılı için henüz imha edilmiş bir belge kaydı bulunmuyor.")
+            st.info(
+    f"{CURRENT_YEAR} yılı için henüz imha edilmiş bir belge kaydı bulunmuyor."
+)
 elif menu == "Günlükler" and is_admin:
     header("Yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
     unit_report = read_df("SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt], SUM(CASE WHEN status = 'Zimmette' THEN 1 ELSE 0 END) AS [Zimmette], SUM(CASE WHEN retention_end_year <= ? AND destruction_status != 'Edildi' THEN 1 ELSE 0 END) AS [Süre riski] FROM aygaz_main_archive GROUP BY unit_code ORDER BY [Kayıt] DESC", (CURRENT_YEAR,))
