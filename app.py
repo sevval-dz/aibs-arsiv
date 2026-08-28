@@ -522,7 +522,7 @@ with st.sidebar:
 
     menu_options = ["Katalog", "İş kuyruğu"]
 
-        if is_admin:
+   if is_admin:
         menu_options.extend([
             "Tanımlar",
             "Saklama ve imha",
