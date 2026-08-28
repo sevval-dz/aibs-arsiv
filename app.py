@@ -18,7 +18,7 @@ CURRENT_YEAR = datetime.now().year
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
-/* Buton dış kutusu ve çerçeve temizliği */
+/* 1. Butonlar: Tek renk kurumsal mavi */
 div.stButton, div[data-testid="stButton"] {
     background: transparent !important;
     padding: 0px !important;
@@ -26,31 +26,35 @@ div.stButton, div[data-testid="stButton"] {
     box-shadow: none !important;
 }
 
-/* Butonun kendisini tek renk mavi yapma */
 div.stButton > button,
-div[data-testid="stButton"] > button,
-div[data-testid="stButton"] > button:focus {
+div[data-testid="stButton"] > button {
     background-color: #005691 !important;
     color: #ffffff !important;
     border: none !important;
     outline: none !important;
     border-radius: 6px !important;
-    box-shadow: none !important;
     font-weight: 600 !important;
-    transition: background-color 0.2s ease;
 }
 
-/* Üzerine gelindiğinde (Hover) */
 div.stButton > button:hover,
 div[data-testid="stButton"] > button:hover {
     background-color: #004070 !important;
     color: #ffffff !important;
-    border: none !important;
-    box-shadow: none !important;
 }
 
-/* Selectbox ve dropdown kenarlık uyumu */
-div[data-baseweb="select"] {
+/* 2. Kullanıcı kutusu, arama kutuları ve tüm girdi alanları: Koyu/okunabilir yazı */
+div[data-baseweb="select"] *,
+div[data-testid="stSelectbox"] *,
+div[data-testid="stTextInput"] input,
+input, select, textarea {
+    color: #1e293b !important;
+    -webkit-text-fill-color: #1e293b !important;
+}
+
+/* Kutu arka planını beyazda sabitleme */
+div[data-baseweb="select"] > div,
+div[data-testid="stTextInput"] > div > div {
+    background-color: #ffffff !important;
     border-radius: 6px !important;
 }
 </style>
