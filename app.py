@@ -565,17 +565,7 @@ if menu == "Katalog":
                         new_doc_name = st.text_input("Belge adı")
                     with a2:
                         new_series = st.text_input("Seri kodu")
-                        unit_options = read_df("SELECT code, name FROM units ORDER BY code")
-
-new_unit_label = st.selectbox(
-    "Birim",
-    [
-        f"{row['code']} · {row['name']}"
-        for _, row in unit_options.iterrows()
-    ]
-)
-
-new_unit = new_unit_label.split(" · ", 1)[0]
+                        new_unit = st.text_input("Birim kodu")
                         new_box = st.text_input("Kutu no")
                     with a3:
                         new_shelf = st.text_input("Raf / yer no")
