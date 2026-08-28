@@ -687,15 +687,16 @@ elif menu == "Tanımlar" and is_admin:
                     connection.execute("INSERT INTO institutions (name, code) VALUES (?, ?)", (new_institution_name.strip(), new_institution_code.strip()))
                     connection.commit(); connection.close(); audit(active_user, "Kurum tanımı", f"{new_institution_code} · {new_institution_name}"); st.success("Kurum kaydedildi."); st.rerun()
 
+
 elif menu == "İş kuyruğu":
     header("İş kuyruğu", "Erişim taleplerini önceliklendir, hazırla ve iz bırak.")
 
-    # Kullanıcılar yalnızca kendi taleplerini,
-    # yöneticiler ise tüm talepleri görür.
+    # Talep yönetme yetkisi olan kullanıcılar tüm talepleri görür.
+    # Diğer kullanıcılar yalnızca kendi taleplerini görür.
     can_manage = can_manage_requests(active_row)
 
-filter_sql = " AND requester = ?" if not can_manage else ""
-filter_params = (active_name,) if not can_manage else ()
+    filter_sql = "" if can_manage else " AND requester = ?"
+    filter_params = () if can_manage else (active_name,)
 
     queue_df = read_df(
         """
@@ -746,7 +747,6 @@ filter_params = (active_name,) if not can_manage else ()
         st.info("Görüntülenecek talep bulunmamaktadır.")
 
     else:
-        # Talep listesi
         st.dataframe(
             queue_df.drop(columns=["id"], errors="ignore"),
             width="stretch",
@@ -777,7 +777,7 @@ filter_params = (active_name,) if not can_manage else ()
             )
 
         with u3:
-            if can_manage_requests(active_row):
+            if can_manage:
                 if st.button(
                     "Güncelle",
                     type="primary",
@@ -805,13 +805,11 @@ filter_params = (active_name,) if not can_manage else ()
 
                     st.success("Talep durumu güncellendi.")
                     st.rerun()
-
             else:
                 st.caption(
                     "Talep durumunu yalnızca yetkili kullanıcılar güncelleyebilir."
                 )
 
-        # Talep içi mesajlaşma
         st.markdown("### Talep içi mesajlaşma")
 
         try:
@@ -864,6 +862,7 @@ filter_params = (active_name,) if not can_manage else ()
 
                 st.success("Mesaj kaydedildi.")
                 st.rerun()
+
 
 elif menu == "Saklama ve imha" and is_admin:
     st.markdown("### Saklama ve İmha Yönetimi")
