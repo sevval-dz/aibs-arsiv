@@ -775,7 +775,7 @@ elif menu == "İş kuyruğu":
             )
 
         with u3:
-            if is_admin:
+            if can_manage_requests(active_row):
                 if st.button(
                     "Güncelle",
                     type="primary",
