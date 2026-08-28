@@ -651,7 +651,6 @@ elif menu == "Tanımlar" and is_admin:
                     connection.execute("INSERT INTO institutions (name, code) VALUES (?, ?)", (new_institution_name.strip(), new_institution_code.strip()))
                     connection.commit(); connection.close(); audit(active_user, "Kurum tanımı", f"{new_institution_code} · {new_institution_name}"); st.success("Kurum kaydedildi."); st.rerun()
 
-```python
 elif menu == "İş kuyruğu":
     header("İş kuyruğu", "Erişim taleplerini önceliklendir, hazırla ve iz bırak.")
 
