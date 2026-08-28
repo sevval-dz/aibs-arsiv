@@ -692,8 +692,10 @@ elif menu == "İş kuyruğu":
 
     # Kullanıcılar yalnızca kendi taleplerini,
     # yöneticiler ise tüm talepleri görür.
-    filter_sql = " AND requester = ?" if not is_admin else ""
-    filter_params = (active_name,) if not is_admin else ()
+    can_manage = can_manage_requests(active_row)
+
+filter_sql = " AND requester = ?" if not can_manage else ""
+filter_params = (active_name,) if not can_manage else ()
 
     queue_df = read_df(
         """
