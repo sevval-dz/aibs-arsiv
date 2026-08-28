@@ -371,6 +371,40 @@ p, label, .stCaption { color:var(--muted); }
 """, unsafe_allow_html=True)
 
 users_df = read_df("SELECT username, full_name, unit_code, auth_codes, role_desc FROM user_permissions ORDER BY id")
+def normalize_auth_codes(auth_codes):
+    if auth_codes is None:
+        return set()
+
+    return {
+        code.strip().upper()
+        for code in str(auth_codes).split(",")
+        if code.strip()
+    }
+
+
+def has_permission(user_row, permission):
+    permission = permission.strip().upper()
+
+    auth_codes = normalize_auth_codes(user_row["auth_codes"])
+
+    if "*" in auth_codes or "ADMIN" in auth_codes:
+        return True
+
+    return permission in auth_codes
+
+
+def is_admin_user(user_row):
+    role = str(user_row["role_desc"] or "").strip().lower()
+    unit = str(user_row["unit_code"] or "").strip().upper()
+    auth_codes = normalize_auth_codes(user_row["auth_codes"])
+
+    return (
+        unit == "ALL"
+        or "admin" in role
+        or "yönetici" in role
+        or "ADMIN" in auth_codes
+        or "*" in auth_codes
+    )
 with st.sidebar:
     sidebar_wordmark = wordmark_data_uri()
     sidebar_brand = f'<img src="{sidebar_wordmark}" alt="AYGAZ" style="width:148px;height:auto;display:block;margin:0 0 12px -4px">' if sidebar_wordmark else '<div class="brand-mark">AYGAZ</div>'
@@ -386,12 +420,18 @@ with st.sidebar:
     active_name = active_row["full_name"]
     active_unit = active_row["unit_code"]
     active_user = active_row["username"]
-    is_admin = active_unit == "ALL" or "admin" in str(active_row["role_desc"]).lower() or "yönetici" in str(active_row["role_desc"]).lower()
+    is_admin = is_admin_user(active_row)
     st.caption(f"{active_row['role_desc']} · {active_unit}")
     st.markdown("---")
     menu_options = ["Katalog", "İş kuyruğu"]
-    if is_admin:
-        menu_options.extend(["Tanımlar", "Saklama ve imha", "Günlükler", "Denetim izi"])
+
+if is_admin:
+    menu_options.extend([
+        "Tanımlar",
+        "Saklama ve imha",
+        "Günlükler",
+        "Denetim izi"
+    ])
     menu = st.radio("Çalışma alanı", menu_options, label_visibility="collapsed")
     st.markdown("---")
     st.caption("Sistem durumu")
@@ -485,7 +525,7 @@ if menu == "Katalog":
                 connection = get_db(); connection.execute("INSERT INTO archive_requests (req_no, requester, unit_code, doc_item, delivery_type, urgency, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (request_no, active_name, active_unit, request_doc, request_type, request_urgency, "Onay Bekliyor", request_note, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))); connection.commit(); connection.close()
                 audit(active_user, "Talep oluşturma", f"{request_no} · {request_doc}"); st.session_state["request_open"] = False; st.success(f"{request_no} numaralı talep kuyruğa alındı."); st.rerun()
 
-elif menu == "Tanımlar":
+elif menu == "Tanımlar" and is_admin:
     header("Tanımlar", "Mevcut Aygaz arşiv sınıflandırmasını bozmadan kurum, birim ve seri kayıtlarını incele.")
     definition_tabs = st.tabs(["Birimler", "Seriler", "Kurumlar"])
     with definition_tabs[0]:
@@ -570,7 +610,7 @@ elif menu == "İş kuyruğu":
                 connection.commit(); connection.close()
                 audit(active_user, "Talep mesajı", f"{selected_request} talebine mesaj eklendi")
                 st.rerun()
-elif menu == "Saklama ve imha":
+elif menu == "Saklama ve imha" and is_admin:
     st.markdown("### Saklama ve İmha Yönetimi")
 
     tab1, tab2 = st.tabs(["Süresi Dolanlar (İmha Bekleyenler)", "İmha Edilen Belgeler Arşivi"])
@@ -626,7 +666,7 @@ elif menu == "Saklama ve imha":
             )
         else:
             st.info("2026 yılı için henüz imha edilmiş bir belge kaydı bulunmuyor.")
-elif menu == "Günlükler":
+elif menu == "Günlükler" and is_admin:
     header("Yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
     unit_report = read_df("SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt], SUM(CASE WHEN status = 'Zimmette' THEN 1 ELSE 0 END) AS [Zimmette], SUM(CASE WHEN retention_end_year <= ? AND destruction_status != 'Edildi' THEN 1 ELSE 0 END) AS [Süre riski] FROM aygaz_main_archive GROUP BY unit_code ORDER BY [Kayıt] DESC", (CURRENT_YEAR,))
     status_report = read_df("SELECT status AS [Durum], COUNT(*) AS [Kayıt] FROM aygaz_main_archive GROUP BY status ORDER BY [Kayıt] DESC")
@@ -652,7 +692,7 @@ elif menu == "Günlükler":
         download_excel("Aylık Excel indir", monthly_report, "aygaz-aylik-kayitlar.xlsx", "Aylık Kayıtlar")
     download_excel("Yönetim raporunu indir", unit_report, "aygaz-arsiv-yonetim-raporu.xlsx", "Birim Raporu", {"Durum Raporu": status_report})
 
-elif menu == "Denetim izi":
+elif menu == "Denetim izi" and is_admin:
     header("Denetim izi", "Arşivde kim, ne zaman, hangi kararı verdi?")
     audit_df = read_df("SELECT timestamp AS [Zaman], user AS [Kullanıcı], action_type AS [İşlem], details AS [Detay] FROM archive_audit ORDER BY id DESC LIMIT 250")
     st.markdown('<div class="hint">Bu akış kullanıcı işlemlerini gösterir. Talep değişiklikleri ve erişim talepleri zaman damgasıyla tutulur.</div>', unsafe_allow_html=True)
