@@ -514,7 +514,7 @@ scope_params = (active_unit,) if active_unit != "ALL" else ()
 scoped_count = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHERE 1=1" + scope_sql, scope_params).iloc[0]["value"]
 open_requests = read_df("SELECT COUNT(*) AS value FROM archive_requests WHERE status NOT IN ('Tamamlandı / İade', 'Teslim Edildi', 'İptal / Red')" + scope_sql, scope_params).iloc[0]["value"]
 custody_count = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHERE status = 'Zimmette'" + scope_sql, scope_params).iloc[0]["value"]
-retention_count = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHERE retention_end_year <= ? AND destruction_status != 'Edildi'" + scope_sql, (CURRENT_YEAR,) + scope_params).iloc[0]["value"]
+retention_count = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHERE retention_end_year <= ? AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ')" + scope_sql, (CURRENT_YEAR,) + scope_params).iloc[0]["value"]
 
 
 def header(title, description):
@@ -759,7 +759,7 @@ elif menu == "Saklama ve imha" and is_admin:
 )
 elif menu == "Günlükler" and is_admin:
     header("Yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
-    unit_report = read_df("SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt], SUM(CASE WHEN status = 'Zimmette' THEN 1 ELSE 0 END) AS [Zimmette], SUM(CASE WHEN retention_end_year <= ? AND destruction_status != 'Edildi' THEN 1 ELSE 0 END) AS [Süre riski] FROM aygaz_main_archive GROUP BY unit_code ORDER BY [Kayıt] DESC", (CURRENT_YEAR,))
+    unit_report = read_df("SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt], SUM(CASE WHEN status = 'Zimmette' THEN 1 ELSE 0 END) AS [Zimmette], SUM(CASE WHEN retention_end_year <= ? AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') THEN 1 ELSE 0 END) AS [Süre riski] FROM aygaz_main_archive GROUP BY unit_code ORDER BY [Kayıt] DESC", (CURRENT_YEAR,))
     status_report = read_df("SELECT status AS [Durum], COUNT(*) AS [Kayıt] FROM aygaz_main_archive GROUP BY status ORDER BY [Kayıt] DESC")
     r1, r2 = st.columns(2)
     with r1:
