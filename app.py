@@ -111,7 +111,23 @@ def init_database():
         CREATE TABLE IF NOT EXISTS units (id INTEGER PRIMARY KEY, name TEXT NOT NULL, code TEXT NOT NULL UNIQUE, inst_code TEXT, inst_name TEXT);
         CREATE TABLE IF NOT EXISTS series (id INTEGER PRIMARY KEY, name TEXT NOT NULL, unit_code TEXT, unit_name TEXT, series_code TEXT NOT NULL UNIQUE, retention_year INTEGER, legal_basis TEXT);
         CREATE TABLE IF NOT EXISTS user_permissions (id INTEGER PRIMARY KEY, username TEXT, full_name TEXT, unit_code TEXT, auth_codes TEXT, role_desc TEXT);
-        CREATE TABLE IF NOT EXISTS aygaz_main_archive (id INTEGER PRIMARY KEY AUTOINCREMENT, doc_reg_no TEXT, doc_no TEXT, doc_name TEXT, series_code TEXT, unit_code TEXT, first_doc_date TEXT, last_doc_date TEXT, box_no TEXT, shelf_no TEXT, institution TEXT, status TEXT, destruction_status TEXT, retention_end_year INTEGER);
+        CREATE TABLE IF NOT EXISTS aygaz_main_archive (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    doc_reg_no TEXT,
+    doc_no TEXT,
+    doc_name TEXT,
+    series_code TEXT,
+    unit_code TEXT,
+    first_doc_date TEXT,
+    last_doc_date TEXT,
+    box_no TEXT,
+    shelf_no TEXT,
+    institution TEXT,
+    status TEXT,
+    destruction_status TEXT DEFAULT 'BEKLİYOR',
+    destruction_date TEXT,
+    retention_end_year INTEGER
+);
         CREATE TABLE IF NOT EXISTS archive_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, req_no TEXT, requester TEXT, unit_code TEXT, doc_item TEXT, delivery_type TEXT, urgency TEXT, status TEXT, notes TEXT, created_at TEXT);
         CREATE TABLE IF NOT EXISTS request_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, req_no TEXT, sender TEXT, message TEXT, created_at TEXT);
         CREATE TABLE IF NOT EXISTS archive_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, user TEXT, action_type TEXT, details TEXT);
@@ -174,14 +190,26 @@ def init_database():
         ])
     connection.commit()
     
-    # İmha ve durum sütunları kontrolü
+        # İmha ve durum sütunları kontrolü
     cursor.execute("PRAGMA table_info(aygaz_main_archive)")
     archive_cols = [row[1] for row in cursor.fetchall()]
 
     if "destruction_date" not in archive_cols:
-        cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_date TEXT")
+        try:
+            cursor.execute(
+                "ALTER TABLE aygaz_main_archive ADD COLUMN destruction_date TEXT"
+            )
+        except sqlite3.OperationalError:
+            pass
+
     if "destruction_status" not in archive_cols:
-        cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_status TEXT DEFAULT 'BEKLİYOR'")
+        try:
+            cursor.execute(
+                "ALTER TABLE aygaz_main_archive "
+                "ADD COLUMN destruction_status TEXT DEFAULT 'BEKLİYOR'"
+            )
+        except sqlite3.OperationalError:
+            pass
 
     connection.commit()
     connection.close()
