@@ -653,8 +653,24 @@ elif menu == "Tanımlar" and is_admin:
 
 elif menu == "İş kuyruğu":
     header("İş kuyruğu", "Erişim taleplerini önceliklendir, hazırla ve iz bırak.")
-    filter_sql = " AND unit_code = ?" if active_unit != "ALL" else ""
-    queue_df = read_df("SELECT id, req_no AS [Talep], requester AS [Talep Eden], unit_code AS [Birim], doc_item AS [Kayıt], delivery_type AS [Teslim], urgency AS [Öncelik], status AS [Durum], created_at AS [Oluşturuldu], notes AS [Not] FROM archive_requests WHERE 1=1" + filter_sql + " ORDER BY id DESC", (active_unit,) if active_unit != "ALL" else ())
+    if is_admin:
+    filter_sql = ""
+    filter_params = ()
+else:
+    filter_sql = " AND requester = ?"
+    filter_params = (active_name,)
+
+queue_df = read_df(
+    "SELECT id, req_no AS [Talep], requester AS [Talep Eden], "
+    "unit_code AS [Birim], doc_item AS [Kayıt], "
+    "delivery_type AS [Teslim], urgency AS [Öncelik], "
+    "status AS [Durum], created_at AS [Oluşturuldu], "
+    "notes AS [Not] "
+    "FROM archive_requests "
+    "WHERE 1=1" + filter_sql +
+    " ORDER BY id DESC",
+    filter_params
+)
     q1, q2, q3 = st.columns(3); q1.metric("Toplam kuyruk", len(queue_df)); q2.metric("Onay bekleyen", int((queue_df["Durum"] == "Onay Bekliyor").sum()) if not queue_df.empty else 0); q3.metric("Acil işler", int(queue_df["Öncelik"].isin(["Acil", "Kritik"]).sum()) if not queue_df.empty else 0)
     st.markdown("<br>", unsafe_allow_html=True); st.dataframe(queue_df.drop(columns=["id"], errors="ignore"), width="stretch", hide_index=True, height=350)
     if not queue_df.empty:
