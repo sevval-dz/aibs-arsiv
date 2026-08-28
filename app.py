@@ -756,7 +756,7 @@ elif menu == "Saklama ve imha" and is_admin:
             
             excel_data = convert_df_to_excel(destroyed_df)
             st.download_button(
-                label="2026 İmha Edilen Belgeler Listesini İndir (Excel)",
+                label=f"{CURRENT_YEAR} İmha Edilen Belgeler Listesini İndir (Excel)",
                 data=excel_data,
                 file_name=f"Aygaz_Imha_Edilen_Belgeler_{CURRENT_YEAR}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
