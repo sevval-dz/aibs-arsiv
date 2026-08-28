@@ -892,7 +892,7 @@ elif menu == "İş kuyruğu":
                 st.rerun()
 
 
-elif menu == "Saklama ve imha" and is_admin:
+elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
     st.markdown("### Saklama ve İmha Yönetimi")
 
     tab1, tab2 = st.tabs(["Süresi Dolanlar (İmha Bekleyenler)", "İmha Edilen Belgeler Arşivi"])
