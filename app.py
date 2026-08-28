@@ -507,6 +507,15 @@ scope_label = "Tüm birimler" if active_unit == "ALL" else f"Birim kapsamı: {ac
 logo_src = logo_data_uri()
 logo_markup = f'<img src="{logo_src}" alt="Aygaz logosu" style="width:34px;height:34px;object-fit:contain">' if logo_src else '<div class="aygaz-symbol">A</div>'
 st.markdown(f'<div class="topbar"><div class="aygaz-lockup">{logo_markup}<span>AYGAZ ARŞİV SİSTEMİ</span></div><div class="topbar-user"><div class="topbar-user-dot">{user_initial}</div><span>{active_name}</span><span class="mono" style="color:#687984;font-size:10px">{scope_label}</span></div></div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="scope">'
+    '<strong>DEMONSTRASYON SÜRÜMÜ</strong> · '
+    'Bu sürüm test ve sunum amaçlıdır. Üretim ortamına alınmadan önce '
+    'kurumsal kimlik doğrulama, yetkilendirme, veri güvenliği ve kapsamlı '
+    'denetim/loglama mekanizmaları uygulanmalıdır.'
+    '</div>',
+    unsafe_allow_html=True
+)
 
 
 scope_sql = " AND unit_code = ?" if active_unit != "ALL" else ""
