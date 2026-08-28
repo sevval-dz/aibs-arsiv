@@ -181,16 +181,17 @@ def init_database():
             ("90085", "1205-22-040", "İSG saha denetim raporları", "11", "1008", "10/05/2022", "15/05/2022", "22910", "H10.014", "AYGAZ", "Depoda", "Edilmedi", 2037),
         ])
     connection.commit()
-    # İmha ve durum sütunları kontrolü
-        cursor.execute("PRAGMA table_info(aygaz_main_archive)")
-        archive_cols = [row[1] for row in cursor.fetchall()]
+# İmha ve durum sütunları kontrolü
+    cursor.execute("PRAGMA table_info(aygaz_main_archive)")
+    archive_cols = [row[1] for row in cursor.fetchall()]
 
-        if "destruction_date" not in archive_cols:
-            cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_date TEXT")
-        if "destruction_status" not in archive_cols:
-            cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_status TEXT DEFAULT 'BEKLİYOR'")
-        connection.commit()
-        connection.close()
+    if "destruction_date" not in archive_cols:
+        cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_date TEXT")
+    if "destruction_status" not in archive_cols:
+        cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_status TEXT DEFAULT 'BEKLİYOR'")
+
+    connection.commit()
+    connection.close()
 def mark_record_as_destroyed(record_no):
     """Belgeyi tek tıkla günün tarihiyle imha edildi olarak işaretler"""
     conn = get_db()
