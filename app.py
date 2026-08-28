@@ -18,8 +18,9 @@ CURRENT_YEAR = datetime.now().year
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
-/* 1. Butonlar: Tek renk kurumsal mavi */
-div.stButton, div[data-testid="stButton"] {
+/* 1. Tüm Butonlar ve Excel İndirme Butonları (Tek Renk Mavi Zemin) */
+div.stButton, div[data-testid="stButton"], 
+div.stDownloadButton, div[data-testid="stDownloadButton"] {
     background: transparent !important;
     padding: 0px !important;
     border: none !important;
@@ -27,31 +28,44 @@ div.stButton, div[data-testid="stButton"] {
 }
 
 div.stButton > button,
-div[data-testid="stButton"] > button {
+div[data-testid="stButton"] > button,
+div.stDownloadButton > button,
+div[data-testid="stDownloadButton"] > button {
     background-color: #005691 !important;
-    color: #ffffff !important;
     border: none !important;
     outline: none !important;
     border-radius: 6px !important;
     font-weight: 600 !important;
+    box-shadow: none !important;
 }
 
-div.stButton > button:hover,
-div[data-testid="stButton"] > button:hover {
-    background-color: #004070 !important;
+/* Buton içindeki tüm yazıların net BEYAZ olması */
+div.stButton > button *,
+div[data-testid="stButton"] > button *,
+div.stDownloadButton > button *,
+div[data-testid="stDownloadButton"] > button * {
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
-/* 2. Kullanıcı kutusu, arama kutuları ve tüm girdi alanları: Koyu/okunabilir yazı */
-div[data-baseweb="select"] *,
-div[data-testid="stSelectbox"] *,
+/* Buton Hover (Üzerine gelindiğinde) */
+div.stButton > button:hover,
+div[data-testid="stButton"] > button:hover,
+div.stDownloadButton > button:hover,
+div[data-testid="stDownloadButton"] > button:hover {
+    background-color: #004070 !important;
+}
+
+/* 2. Kullanıcı Kutusu ve Metin Girdi Alanları (Beyaz Zemin, Koyu Yazı) */
+div[data-baseweb="select"] input,
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] div,
 div[data-testid="stTextInput"] input,
 input, select, textarea {
     color: #1e293b !important;
     -webkit-text-fill-color: #1e293b !important;
 }
 
-/* Kutu arka planını beyazda sabitleme */
 div[data-baseweb="select"] > div,
 div[data-testid="stTextInput"] > div > div {
     background-color: #ffffff !important;
