@@ -433,19 +433,22 @@ if is_admin:
         "Denetim izi"
     ])
 
-    menu = st.radio(
-        "Çalışma alanı",
-        menu_options,
-        label_visibility="visible"
-    )
+menu = st.radio(
+    "Çalışma alanı",
+    menu_options,
+    label_visibility="visible"
+)
 
+with st.sidebar:
     st.markdown("---")
     st.caption("Sistem durumu")
     st.markdown(
         '<div style="color:#ffffff;font-size:12px;font-weight:600;">Veritabanı bağlı</div>',
         unsafe_allow_html=True
     )
-    st.caption(datetime.now().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M"))
+    st.caption(
+        datetime.now().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M")
+    )
 
 user_initial = active_name[:1].upper() if active_name else "K"
 scope_label = "Tüm birimler" if active_unit == "ALL" else f"Birim kapsamı: {active_unit}"
