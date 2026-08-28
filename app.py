@@ -173,7 +173,8 @@ def init_database():
             ("90085", "1205-22-040", "İSG saha denetim raporları", "11", "1008", "10/05/2022", "15/05/2022", "22910", "H10.014", "AYGAZ", "Depoda", "Edilmedi", 2037),
         ])
     connection.commit()
-# İmha ve durum sütunları kontrolü
+    
+    # İmha ve durum sütunları kontrolü
     cursor.execute("PRAGMA table_info(aygaz_main_archive)")
     archive_cols = [row[1] for row in cursor.fetchall()]
 
@@ -501,7 +502,6 @@ with st.sidebar:
     )
 
 
-user_initial = active_name[:1].upper() if active_name else "K"
 user_initial = active_name[:1].upper() if active_name else "K"
 scope_label = "Tüm birimler" if active_unit == "ALL" else f"Birim kapsamı: {active_unit}"
 logo_src = logo_data_uri()
