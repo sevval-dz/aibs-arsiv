@@ -828,7 +828,6 @@ elif menu == "İş kuyruğu":
 
                 st.success("Mesaj kaydedildi.")
                 st.rerun()
-```
 
 elif menu == "Saklama ve imha" and is_admin:
     st.markdown("### Saklama ve İmha Yönetimi")
