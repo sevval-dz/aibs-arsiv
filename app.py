@@ -651,31 +651,97 @@ elif menu == "Tanımlar" and is_admin:
                     connection.execute("INSERT INTO institutions (name, code) VALUES (?, ?)", (new_institution_name.strip(), new_institution_code.strip()))
                     connection.commit(); connection.close(); audit(active_user, "Kurum tanımı", f"{new_institution_code} · {new_institution_name}"); st.success("Kurum kaydedildi."); st.rerun()
 
+```python
 elif menu == "İş kuyruğu":
     header("İş kuyruğu", "Erişim taleplerini önceliklendir, hazırla ve iz bırak.")
+
+    # Kullanıcılar yalnızca kendi taleplerini,
+    # yöneticiler ise tüm talepleri görür.
     filter_sql = " AND requester = ?" if not is_admin else ""
     filter_params = (active_name,) if not is_admin else ()
+
     queue_df = read_df(
-        "SELECT id, req_no AS [Talep], requester AS [Talep Eden], "
-        "unit_code AS [Birim], doc_item AS [Kayıt], "
-        "delivery_type AS [Teslim], urgency AS [Öncelik], "
-        "status AS [Durum], created_at AS [Oluşturuldu], "
-        "notes AS [Not] "
-        "FROM archive_requests "
-        "WHERE 1=1" + filter_sql +
-        " ORDER BY id DESC",
+        """
+        SELECT
+            id,
+            req_no AS [Talep],
+            requester AS [Talep Eden],
+            unit_code AS [Birim],
+            doc_item AS [Kayıt],
+            delivery_type AS [Teslim],
+            urgency AS [Öncelik],
+            status AS [Durum],
+            created_at AS [Oluşturuldu],
+            notes AS [Not]
+        FROM archive_requests
+        WHERE 1=1
+        """ + filter_sql + """
+        ORDER BY id DESC
+        """,
         filter_params
     )
 
+    # Özet bilgiler
     q1, q2, q3 = st.columns(3)
-    q1, q2, q3 = st.columns(3); q1.metric("Toplam kuyruk", len(queue_df)); q2.metric("Onay bekleyen", int((queue_df["Durum"] == "Onay Bekliyor").sum()) if not queue_df.empty else 0); q3.metric("Acil işler", int(queue_df["Öncelik"].isin(["Acil", "Kritik"]).sum()) if not queue_df.empty else 0)
-    st.markdown("<br>", unsafe_allow_html=True); st.dataframe(queue_df.drop(columns=["id"], errors="ignore"), width="stretch", hide_index=True, height=350)
-    if not queue_df.empty:
-        st.markdown("### Durum güncelle"); u1, u2, u3 = st.columns([2, 2, 1])
-        with u1: selected_request = st.selectbox("Talep", queue_df["Talep"].tolist())
-        with u2: new_status = st.selectbox("Yeni durum", ["Onay Bekliyor", "Hazırlanıyor", "Kuryede", "Teslim Edildi", "İptal / Red"])
+
+    q1.metric(
+        "Toplam kuyruk",
+        len(queue_df)
+    )
+
+    q2.metric(
+        "Onay bekleyen",
+        int(
+            (queue_df["Durum"] == "Onay Bekliyor").sum()
+        ) if not queue_df.empty else 0
+    )
+
+    q3.metric(
+        "Acil işler",
+        int(
+            queue_df["Öncelik"].isin(["Acil", "Kritik"]).sum()
+        ) if not queue_df.empty else 0
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if queue_df.empty:
+        st.info("Görüntülenecek talep bulunmamaktadır.")
+
+    else:
+        # Talep listesi
+        st.dataframe(
+            queue_df.drop(columns=["id"], errors="ignore"),
+            width="stretch",
+            hide_index=True,
+            height=350
+        )
+
+        st.markdown("### Talep işlemleri")
+
+        u1, u2, u3 = st.columns([2, 2, 1])
+
+        with u1:
+            selected_request = st.selectbox(
+                "Talep",
+                queue_df["Talep"].tolist()
+            )
+
+        with u2:
+            new_status = st.selectbox(
+                "Yeni durum",
+                [
+                    "Onay Bekliyor",
+                    "Hazırlanıyor",
+                    "Kuryede",
+                    "Teslim Edildi",
+                    "İptal / Red"
+                ]
+            )
+
         with u3:
             st.markdown("<br>")
+
             if is_admin:
                 if st.button(
                     "Güncelle",
@@ -704,23 +770,67 @@ elif menu == "İş kuyruğu":
 
                     st.success("Talep durumu güncellendi.")
                     st.rerun()
-    else:
-        st.caption("Talep durumunu yalnızca yetkili kullanıcılar güncelleyebilir.")
+
+            else:
+                st.caption(
+                    "Talep durumunu yalnızca yetkili kullanıcılar güncelleyebilir."
+                )
+
+        # Talep içi mesajlaşma
         st.markdown("### Talep içi mesajlaşma")
+
         try:
-            message_df = read_df("SELECT * FROM request_messages WHERE req_no = ?", params=[selected_request])
+            message_df = read_df(
+                "SELECT * FROM request_messages WHERE req_no = ?",
+                params=[selected_request]
+            )
+
             if not message_df.empty:
-                st.dataframe(message_df, width="stretch", hide_index=True)
+                st.dataframe(
+                    message_df,
+                    width="stretch",
+                    hide_index=True
+                )
+
         except Exception:
             pass
+
         with st.form("request_message_form"):
-            message = st.text_input("Mesaj", placeholder="Konum, teslimat veya inceleme notu...")
+            message = st.text_input(
+                "Mesaj",
+                placeholder="Konum, teslimat veya inceleme notu..."
+            )
+
             if st.form_submit_button("Mesajı kaydet") and message.strip():
                 connection = get_db()
-                connection.execute("INSERT INTO request_messages (req_no, sender, message, created_at) VALUES (?, ?, ?, ?)", (selected_request, active_name, message.strip(), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-                connection.commit(); connection.close()
-                audit(active_user, "Talep mesajı", f"{selected_request} talebine mesaj eklendi")
+
+                connection.execute(
+                    """
+                    INSERT INTO request_messages
+                    (req_no, sender, message, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        selected_request,
+                        active_name,
+                        message.strip(),
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                )
+
+                connection.commit()
+                connection.close()
+
+                audit(
+                    active_user,
+                    "Talep mesajı",
+                    f"{selected_request} talebine mesaj eklendi"
+                )
+
+                st.success("Mesaj kaydedildi.")
                 st.rerun()
+```
+
 elif menu == "Saklama ve imha" and is_admin:
     st.markdown("### Saklama ve İmha Yönetimi")
 
