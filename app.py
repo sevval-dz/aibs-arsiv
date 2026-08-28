@@ -407,21 +407,54 @@ def is_admin_user(user_row):
     )
 with st.sidebar:
     sidebar_wordmark = wordmark_data_uri()
-    sidebar_brand = f'<img src="{sidebar_wordmark}" alt="AYGAZ" style="width:148px;height:auto;display:block;margin:0 0 12px -4px">' if sidebar_wordmark else '<div class="brand-mark">AYGAZ</div>'
-    st.markdown(f'<div class="brand">{sidebar_brand}<div class="brand-name">Arşiv Sistemi</div><div class="brand-meta">AMBARLI OPERASYON MERKEZİ</div></div>', unsafe_allow_html=True)
+    sidebar_brand = (
+        f'<img src="{sidebar_wordmark}" alt="AYGAZ" '
+        f'style="width:148px;height:auto;display:block;margin:0 0 12px -4px">'
+        if sidebar_wordmark
+        else '<div class="brand-mark">AYGAZ</div>'
+    )
+
+    st.markdown(
+        f'<div class="brand">{sidebar_brand}'
+        f'<div class="brand-name">Arşiv Sistemi</div>'
+        f'<div class="brand-meta">AMBARLI OPERASYON MERKEZİ</div></div>',
+        unsafe_allow_html=True
+    )
+
     if users_df.empty:
         st.error("user_permissions tablosunda kullanıcı bulunamadı.")
         st.stop()
-    user_labels = [f"{row.full_name} · {row.unit_code}" for row in users_df.itertuples()]
+
+    user_labels = [
+        f"{row.full_name} · {row.unit_code}"
+        for row in users_df.itertuples()
+    ]
+
     configured_user = os.getenv("AIBS_USER", "").casefold()
-    default_index = next((index for index, row in enumerate(users_df.itertuples()) if str(row.username).casefold() == configured_user), 0)
-    selected_user = st.selectbox("Kullanıcı", user_labels, index=default_index, label_visibility="visible")
+
+    default_index = next(
+        (
+            index
+            for index, row in enumerate(users_df.itertuples())
+            if str(row.username).casefold() == configured_user
+        ),
+        0
+    )
+
+    selected_user = st.selectbox(
+        "Kullanıcı",
+        user_labels,
+        index=default_index,
+        label_visibility="visible"
+    )
+
     active_row = users_df.iloc[user_labels.index(selected_user)]
     active_name = active_row["full_name"]
     active_unit = active_row["unit_code"]
     active_user = active_row["username"]
     is_admin = is_admin_user(active_row)
-        st.caption(f"{active_row['role_desc']} · {active_unit}")
+
+    st.caption(f"{active_row['role_desc']} · {active_unit}")
     st.markdown("---")
 
     menu_options = ["Katalog", "İş kuyruğu"]
@@ -442,37 +475,22 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption("Sistem durumu")
+
     st.markdown(
-        '<div style="color:#ffffff;font-size:12px;font-weight:600;">Veritabanı bağlı</div>',
+        '<div style="color:#ffffff;font-size:12px;font-weight:600;">'
+        'Veritabanı bağlı'
+        '</div>',
         unsafe_allow_html=True
     )
+
     st.caption(
-        datetime.now().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M")
-    )
-    menu_options.extend([
-        "Tanımlar",
-        "Saklama ve imha",
-        "Günlükler",
-        "Denetim izi"
-    ])
-
-menu = st.radio(
-    "Çalışma alanı",
-    menu_options,
-    label_visibility="visible"
-)
-
-with st.sidebar:
-    st.markdown("---")
-    st.caption("Sistem durumu")
-    st.markdown(
-        '<div style="color:#ffffff;font-size:12px;font-weight:600;">Veritabanı bağlı</div>',
-        unsafe_allow_html=True
-    )
-    st.caption(
-        datetime.now().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M")
+        datetime.now().strftime(
+            "Son senkronizasyon  %d.%m.%Y · %H:%M"
+        )
     )
 
+
+user_initial = active_name[:1].upper() if active_name else "K"
 user_initial = active_name[:1].upper() if active_name else "K"
 scope_label = "Tüm birimler" if active_unit == "ALL" else f"Birim kapsamı: {active_unit}"
 logo_src = logo_data_uri()
