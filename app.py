@@ -421,11 +421,34 @@ with st.sidebar:
     active_unit = active_row["unit_code"]
     active_user = active_row["username"]
     is_admin = is_admin_user(active_row)
-    st.caption(f"{active_row['role_desc']} · {active_unit}")
+        st.caption(f"{active_row['role_desc']} · {active_unit}")
     st.markdown("---")
-menu_options = ["Katalog", "İş kuyruğu"]
 
-if is_admin:
+    menu_options = ["Katalog", "İş kuyruğu"]
+
+    if is_admin:
+        menu_options.extend([
+            "Tanımlar",
+            "Saklama ve imha",
+            "Günlükler",
+            "Denetim izi"
+        ])
+
+    menu = st.radio(
+        "Çalışma alanı",
+        menu_options,
+        label_visibility="visible"
+    )
+
+    st.markdown("---")
+    st.caption("Sistem durumu")
+    st.markdown(
+        '<div style="color:#ffffff;font-size:12px;font-weight:600;">Veritabanı bağlı</div>',
+        unsafe_allow_html=True
+    )
+    st.caption(
+        datetime.now().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M")
+    )
     menu_options.extend([
         "Tanımlar",
         "Saklama ve imha",
