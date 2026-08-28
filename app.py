@@ -417,6 +417,29 @@ def is_admin_user(user_row):
         or "ADMIN" in auth_codes
         or "*" in auth_codes
     )
+
+def can_manage_requests(user_row):
+    return (
+        is_admin_user(user_row)
+        or has_permission(user_row, "TALEP_YONETIM")
+        or has_permission(user_row, "REQUEST_MANAGE")
+    )
+
+
+def can_manage_destruction(user_row):
+    return (
+        is_admin_user(user_row)
+        or has_permission(user_row, "IMHA")
+        or has_permission(user_row, "DESTRUCTION")
+    )
+
+
+def can_view_audit(user_row):
+    return (
+        is_admin_user(user_row)
+        or has_permission(user_row, "DENETIM")
+        or has_permission(user_row, "AUDIT")
+    )
 with st.sidebar:
     sidebar_wordmark = wordmark_data_uri()
     sidebar_brand = (
