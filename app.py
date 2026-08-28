@@ -12,7 +12,14 @@ import zipfile
 import pandas as pd
 import streamlit as st
 
+st.set_page_config(
+    page_title="Aygaz Dijital Arşiv",
+    page_icon="Aygaz.png",
+    layout="wide"
+)
+
 DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
+
 CURRENT_YEAR = datetime.now().year
 
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
