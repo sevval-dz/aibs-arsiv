@@ -18,9 +18,10 @@ CURRENT_YEAR = datetime.now().year
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
-/* 1. Tüm Butonlar (Arka plan ve çerçeve sabitleme) */
+/* 1. TÜM BUTONLAR (Normal Butonlar, Form Gönder Butonları, İndirme Butonları) */
 div.stButton, div[data-testid="stButton"], 
-div.stDownloadButton, div[data-testid="stDownloadButton"] {
+div.stDownloadButton, div[data-testid="stDownloadButton"],
+div.stFormSubmitButton, div[data-testid="stFormSubmitButton"] {
     background: transparent !important;
     padding: 0px !important;
     border: none !important;
@@ -30,8 +31,12 @@ div.stDownloadButton, div[data-testid="stDownloadButton"] {
 div.stButton > button,
 div[data-testid="stButton"] > button,
 div.stDownloadButton > button,
-div[data-testid="stDownloadButton"] > button {
+div[data-testid="stDownloadButton"] > button,
+div.stFormSubmitButton > button,
+div[data-testid="stFormSubmitButton"] > button,
+button[data-testid^="baseButton"] {
     background-color: #005691 !important;
+    background: #005691 !important;
     border: none !important;
     outline: none !important;
     border-radius: 6px !important;
@@ -39,17 +44,14 @@ div[data-testid="stDownloadButton"] > button {
     box-shadow: none !important;
 }
 
-/* 2. Buton İçindeki Yazılar (Kesin Beyaz Renk) */
-div.stButton > button p,
-div[data-testid="stButton"] > button p,
-div.stDownloadButton > button p,
-div[data-testid="stDownloadButton"] > button p,
-div.stButton > button span,
-div[data-testid="stButton"] > button span,
-div.stDownloadButton > button span,
-div[data-testid="stDownloadButton"] > button span,
-div.stButton > button div,
-div[data-testid="stButton"] > button div {
+/* Tüm butonların içindeki metinleri kesin BEYAZ yap */
+div.stButton > button *,
+div[data-testid="stButton"] > button *,
+div.stDownloadButton > button *,
+div[data-testid="stDownloadButton"] > button *,
+div.stFormSubmitButton > button *,
+div[data-testid="stFormSubmitButton"] > button *,
+button[data-testid^="baseButton"] * {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
 }
@@ -58,24 +60,36 @@ div[data-testid="stButton"] > button div {
 div.stButton > button:hover,
 div[data-testid="stButton"] > button:hover,
 div.stDownloadButton > button:hover,
-div[data-testid="stDownloadButton"] > button:hover {
+div[data-testid="stDownloadButton"] > button:hover,
+div.stFormSubmitButton > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover,
+button[data-testid^="baseButton"]:hover {
     background-color: #004070 !important;
+    background: #004070 !important;
+    border: none !important;
 }
 
-/* 3. Form Girdi Alanları (Beyaz Zemin, Koyu Yazı) */
-div[data-baseweb="select"] input,
-div[data-baseweb="select"] span,
-div[data-baseweb="select"] div,
-div[data-testid="stTextInput"] input,
-input, select, textarea {
-    color: #1e293b !important;
-    -webkit-text-fill-color: #1e293b !important;
-}
-
+/* 2. KULLANICI KUTUSU & FORM GİRDİLERİ */
 div[data-baseweb="select"] > div,
 div[data-testid="stTextInput"] > div > div {
     background-color: #ffffff !important;
     border-radius: 6px !important;
+}
+
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] input,
+div[data-testid="stTextInput"] input {
+    color: #1e293b !important;
+    -webkit-text-fill-color: #1e293b !important;
+}
+
+/* Kullanıcı kutusunun sağındaki açılır oku (chevron) geri getirme */
+div[data-baseweb="select"] svg,
+div[data-testid="stSelectbox"] svg {
+    display: block !important;
+    visibility: visible !important;
+    fill: #1e293b !important;
+    color: #1e293b !important;
 }
 </style>
 """, unsafe_allow_html=True)
