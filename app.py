@@ -18,92 +18,41 @@ CURRENT_YEAR = datetime.now().year
 st.set_page_config(page_title="Aygaz Arşiv Sistemi", page_icon="▦", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
-/* Tablo Zeminini Beyaz, Başlıkları Aygaz Mavisi Yap */
-table {
-    width: 100% !important;
-    background-color: #ffffff !important;
-    border-collapse: collapse !important;
-    border-radius: 8px !important;
-    overflow: hidden !important;
-}
-
-table th {
-    background-color: #005696 !important;
-    color: #ffffff !important;
-    font-weight: 600 !important;
-    padding: 10px 12px !important;
-    text-align: left !important;
+/* Buton dış kutusu ve çerçeve temizliği */
+div.stButton, div[data-testid="stButton"] {
+    background: transparent !important;
+    padding: 0px !important;
     border: none !important;
+    box-shadow: none !important;
 }
 
-table td {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    padding: 8px 12px !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-    font-size: 14px !important;
-}
-
-table tr:hover td {
-    background-color: #f8fafc !important;
-}
-/* Sol Sidebar Kullanıcı Seçim Kutusu Arka Planı */
-[data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
-[data-testid="stSidebar"] div[data-baseweb="select"] > div {
-    background-color: #ffffff !important;
-    border-radius: 8px !important;
-}
-
-/* Sol Sidebar Seçili Metin Rengini Zorla Koyu Mavi Yap (#004d80) */
-[data-testid="stSidebar"] [data-testid="stSelectbox"] *,
-[data-testid="stSidebar"] div[data-baseweb="select"] *,
-[data-testid="stSidebar"] div[data-baseweb="select"] div,
-[data-testid="stSidebar"] div[data-baseweb="select"] span,
-[data-testid="stSidebar"] div[data-baseweb="select"] input,
-[data-testid="stSidebar"] [role="combobox"],
-[data-testid="stSidebar"] [role="combobox"] * {
-    color: #004d80 !important;
-    -webkit-text-fill-color: #004d80 !important;
-    font-weight: 700 !important;
-    opacity: 1 !important;
-}
-
-/* Sol Sidebar Açılır Ok İkonu */
-[data-testid="stSidebar"] div[data-baseweb="select"] svg,
-[data-testid="stSidebar"] div[data-baseweb="select"] svg path {
-    fill: #004d80 !important;
-    stroke: #004d80 !important;
-}
-
-/* Tüm Metin Giriş / Form Kutuları */
-div[data-testid="stTextInput"] input,
-div[data-testid="stTextArea"] textarea,
-div[data-testid="stDateInput"] input {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-    background-color: #ffffff !important;
-    font-weight: 500 !important;
-}
-
-/* Tüm Mavi Butonlar */
-button,
-button *,
-button[kind="primary"],
-button[kind="primary"] *,
-div[data-testid="stFormSubmitButton"] button,
-div[data-testid="stDownloadButton"] button,
-div[data-testid="stDownloadButton"] button * {
+/* Butonun kendisini tek renk mavi yapma */
+div.stButton > button,
+div[data-testid="stButton"] > button,
+div[data-testid="stButton"] > button:focus {
+    background-color: #005691 !important;
     color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    background-color: #005696 !important;
-    border-color: #005696 !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
     font-weight: 600 !important;
+    transition: background-color 0.2s ease;
 }
-/* Deploy butonunu, üst menüyü ve Streamlit filigranını gizle */
-#MainMenu {visibility: hidden !important;}
-header {visibility: hidden !important;}
-footer {visibility: hidden !important;}
-.stDeployButton {display: none !important;}
+
+/* Üzerine gelindiğinde (Hover) */
+div.stButton > button:hover,
+div[data-testid="stButton"] > button:hover {
+    background-color: #004070 !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Selectbox ve dropdown kenarlık uyumu */
+div[data-baseweb="select"] {
+    border-radius: 6px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 def get_db():
