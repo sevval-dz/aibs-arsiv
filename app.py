@@ -652,37 +652,37 @@ elif menu == "İş kuyruğu":
         st.markdown("### Durum güncelle"); u1, u2, u3 = st.columns([2, 2, 1])
         with u1: selected_request = st.selectbox("Talep", queue_df["Talep"].tolist())
         with u2: new_status = st.selectbox("Yeni durum", ["Onay Bekliyor", "Hazırlanıyor", "Kuryede", "Teslim Edildi", "İptal / Red"])
-        with u3:
-    st.markdown("<br>")
+                with u3:
+            st.markdown("<br>")
 
-    if is_admin:
-        if st.button(
-            "Güncelle",
-            type="primary",
-            width="stretch"
-        ):
-            connection = get_db()
+            if is_admin:
+                if st.button(
+                    "Güncelle",
+                    type="primary",
+                    width="stretch"
+                ):
+                    connection = get_db()
 
-            connection.execute(
-                """
-                UPDATE archive_requests
-                SET status = ?
-                WHERE req_no = ?
-                """,
-                (new_status, selected_request)
-            )
+                    connection.execute(
+                        """
+                        UPDATE archive_requests
+                        SET status = ?
+                        WHERE req_no = ?
+                        """,
+                        (new_status, selected_request)
+                    )
 
-            connection.commit()
-            connection.close()
+                    connection.commit()
+                    connection.close()
 
-            audit(
-                active_user,
-                "Talep durumu",
-                f"{selected_request} → {new_status}"
-            )
+                    audit(
+                        active_user,
+                        "Talep durumu",
+                        f"{selected_request} → {new_status}"
+                    )
 
-            st.success("Talep durumu güncellendi.")
-            st.rerun()
+                    st.success("Talep durumu güncellendi.")
+                    st.rerun()
     else:
         st.caption("Talep durumunu yalnızca yetkili kullanıcılar güncelleyebilir.")
         st.markdown("### Talep içi mesajlaşma")
