@@ -24,20 +24,32 @@ st.markdown("""
     display: none !important;
 }
 
-/* Üst sağdaki menü alanını gizle */
+/* Üst sağdaki menü/dekorasyon alanını gizle */
 [data-testid="stDecoration"] {
     display: none !important;
 }
-/* Sidebar kapalıyken yeniden açma düğmesini görünür tut */
+
+/* Sidebar */
 [data-testid="stSidebar"] {
     overflow: visible !important;
 }
 
+/* Sidebar açıkken/kapanırken kontrol düğmesini görünür tut */
 [data-testid="stSidebarCollapseButton"] {
     visibility: visible !important;
     opacity: 1 !important;
+    display: flex !important;
+}
+
+/* Sidebar kapalıyken sol üstte çıkan açma düğmesini gizleme */
+[data-testid="stSidebarCollapsedControl"] {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    z-index: 999999 !important;
 }
 </style>
+""", unsafe_allow_html=True)
 """, unsafe_allow_html=True)
 DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
 
