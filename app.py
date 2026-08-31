@@ -41,17 +41,40 @@ CURRENT_YEAR = suanki_zaman().year
 
 st.markdown("""
 <style>
-/* Sol menü açma/kapatma butonunu aktif ve görünür tut */
+/* Sol menü açma butonunu katmanların en önüne çıkar ve görünür yap */
 [data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarCollapsedControl"],
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="stSidebarCollapsedControl"] button {
+[data-testid="collapsedControl"],
+header [data-testid="stSidebarCollapsedControl"],
+button[aria-label="Open sidebar"],
+button[aria-label="Close sidebar"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+    z-index: 999999 !important;
 }
 
-/* Sağ üstteki GitHub, Düzenle, Paylaş ve Menü araç çubuğunu tamamen gizle */
+/* Menü kapalıyken sol üstte beliren butonun kutusu ve konumu */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
+button[aria-label="Open sidebar"] {
+    background-color: #ffffff !important;
+    border: 1px solid #b9d8eb !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08) !important;
+}
+
+/* Ok simgesini görünür yap ve mavi renge boya */
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="collapsedControl"] svg,
+button[aria-label="Open sidebar"] svg {
+    fill: #0072bc !important;
+    stroke: #0072bc !important;
+    color: #0072bc !important;
+    display: block !important;
+}
+
+/* Sağ üstteki GitHub, Paylaş ve Menü araçlarını gizle */
 [data-testid="stToolbar"],
 [data-testid="stHeaderActionElements"],
 #MainMenu,
