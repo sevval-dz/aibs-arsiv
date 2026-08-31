@@ -19,30 +19,68 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
-/* Streamlit sağ üst araç çubuğunu gizle */
+
+/* =========================================================
+   STREAMLIT ÜST MENÜ
+   ========================================================= */
+
+/* Sağ üst Streamlit araç çubuğunu gizle */
 [data-testid="stToolbar"] {
     display: none !important;
 }
 
-/* Üst sağdaki menü/dekorasyon alanını gizle */
+/* Üst sağ dekorasyon alanını gizle */
 [data-testid="stDecoration"] {
     display: none !important;
 }
 
-/* Sidebar açık/kapalı kontrolü */
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+/* Sidebar'ın kendisi */
+[data-testid="stSidebar"] {
+    visibility: visible !important;
+}
+
+/* Sidebar açıkken sol üstteki kapatma oku */
 [data-testid="stSidebarCollapseButton"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
 }
 
-/* Sidebar kapalıyken yeniden açma düğmesi */
+/* Sidebar kapalıyken sol üstte çıkan yeniden açma düğmesi */
 [data-testid="stSidebarCollapsedControl"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+    pointer-events: auto !important;
     z-index: 999999 !important;
 }
+
+/* Yeniden açma düğmesinin içindeki buton */
+[data-testid="stSidebarCollapsedControl"] button {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+
+/* =========================================================
+   SIDEBAR İÇİNDEKİ KONTROLLER
+   ========================================================= */
+
+/* Sidebar kapat/aç düğmelerinin tıklanabilir kalması */
+[data-testid="stSidebarCollapseButton"] button {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
