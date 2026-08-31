@@ -11,6 +11,16 @@ import zipfile
 import pandas as pd
 import streamlit as st
 
+st.set_page_config(
+    page_title="Aygaz Arşiv Sistemi",
+    page_icon="Aygaz.png",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Veritabanı Bağlantı Yolu
+DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
+
 # Türkiye Saati (UTC+3) ve Türkçe Ay Tanımları
 TR_TZ = timezone(timedelta(hours=3))
 
@@ -28,8 +38,6 @@ def formatli_tarih():
     return f"{now.day:02d} {ay} {now.year} · {now.strftime('%H:%M')}"
 
 CURRENT_YEAR = suanki_zaman().year
-
-CURRENT_YEAR = datetime.now().year
 
 st.markdown("""
 <style>
