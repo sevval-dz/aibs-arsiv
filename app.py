@@ -10,6 +10,7 @@ import zipfile
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Aygaz Arşiv Sistemi",
@@ -38,6 +39,64 @@ def formatli_tarih():
     return f"{now.day:02d} {ay} {now.year} · {now.strftime('%H:%M')}"
 
 CURRENT_YEAR = suanki_zaman().year
+components.html(
+    """
+    <script>
+    const parentDoc = window.parent.document;
+
+    function toggleSidebar() {
+
+        const selectors = [
+            '[data-testid="stSidebarCollapseButton"] button',
+            '[data-testid="stSidebarCollapsedControl"] button',
+            '[data-testid="collapsedControl"] button',
+            'button[aria-label="Collapse sidebar"]',
+            'button[aria-label="Expand sidebar"]'
+        ];
+
+        for (const selector of selectors) {
+            const button = parentDoc.querySelector(selector);
+
+            if (button) {
+                button.click();
+                return;
+            }
+        }
+    }
+
+    const old = parentDoc.getElementById("aygaz-sidebar-button");
+
+    if (old) {
+        old.remove();
+    }
+
+    const button = parentDoc.createElement("button");
+
+    button.id = "aygaz-sidebar-button";
+    button.innerHTML = "‹";
+
+    button.style.position = "fixed";
+    button.style.left = "10px";
+    button.style.top = "10px";
+    button.style.width = "38px";
+    button.style.height = "38px";
+    button.style.zIndex = "999999999";
+    button.style.background = "#0072bc";
+    button.style.color = "#ffffff";
+    button.style.border = "1px solid #005b94";
+    button.style.borderRadius = "7px";
+    button.style.fontSize = "24px";
+    button.style.cursor = "pointer";
+    button.style.boxShadow = "0 2px 8px rgba(0,0,0,.25)";
+
+    button.onclick = toggleSidebar;
+
+    parentDoc.body.appendChild(button);
+    </script>
+    """,
+    height=0,
+    width=0
+)
 # =========================================================
 # SIDEBAR AÇ / KAPAT BUTONU
 # =========================================================
