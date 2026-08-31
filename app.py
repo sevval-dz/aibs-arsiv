@@ -354,38 +354,36 @@ table tr:hover td, .dataframe tr:hover td {
 [data-testid="stDataFrame"] [role="gridcell"] { background: #ffffff !important; color: #17232d !important; }
 
 /* =========================================================
-   2. SOL MENÜ (SIDEBAR) & KULLANICI KUTUSU (3. FOTOĞRAF DÜZELTMESİ)
+   2. SOL MENÜ (SIDEBAR) & KULLANICI KUTUSU SİYAH YAZI
    ========================================================= */
 [data-testid="stSidebar"] { 
-    background: #0072bc; 
-    border-right: 0; 
+    background: #0072bc !important; 
+    border-right: 0 !important; 
 }
 
-[data-testid="stSidebar"] * { 
-    color: #ffffff; 
+/* Sidebar genel başlık ve yazıları */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] .stCaption,
+[data-testid="stSidebar"] .stRadio span { 
+    color: #ffffff !important; 
 }
 
-/* Sol menüdeki Kullanıcı Seçim Kutusu Arka Planı ve SİYAH Yazı */
-[data-testid="stSidebar"] div[data-baseweb="select"] > div { 
-    background: #ffffff !important; 
+/* Kullanıcı Seçim Kutusunun Arka Planı BEYAZ */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div { 
+    background-color: #ffffff !important; 
     border-radius: 7px !important; 
     border: 1px solid #ffffff !important;
 }
 
-[data-testid="stSidebar"] div[data-baseweb="select"] span,
-[data-testid="stSidebar"] div[data-baseweb="select"] p,
-[data-testid="stSidebar"] div[data-baseweb="select"] div,
-[data-testid="stSidebar"] div[data-baseweb="select"] input { 
+/* Kullanıcı Kutusunun İçindeki TÜM Yazılar ve Açılır Ok Simgesi SİYAH */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] * { 
     color: #000000 !important; 
     -webkit-text-fill-color: #000000 !important; 
+    fill: #000000 !important;
+    stroke: #000000 !important;
     font-weight: 600 !important; 
     opacity: 1 !important; 
-}
-
-[data-testid="stSidebar"] div[data-baseweb="select"] svg { 
-    fill: #000000 !important; 
-    color: #000000 !important; 
-    stroke: #000000 !important; 
 }
 
 [data-testid="stSidebar"] hr { border-color: #5aa6d2; }
@@ -393,9 +391,8 @@ table tr:hover td, .dataframe tr:hover td {
 [data-testid="stSidebar"] .stRadio label:hover { background: #29434b; }
 
 /* =========================================================
-   3. TÜM BUTONLAR (2. FOTOĞRAFTAKİ TURKUAZ/YEŞİL RENK)
+   3. TÜM BUTONLAR (TURKUAZ / YEŞİL RENK)
    ========================================================= */
-/* Excel İndir, Form Butonları, Mesaj Kaydet vb. tüm butonları 2. fotoğraftaki renge eşitler */
 .stButton button, 
 .stDownloadButton button, 
 .stFormSubmitButton button,
@@ -427,7 +424,7 @@ div[data-testid="stFormSubmitButton"] > button:hover {
 }
 
 /* =========================================================
-   4. FORM GİRİŞ VE METİN KUTULARI (1, 4 ve 5. FOTOĞRAFLAR)
+   4. FORM GİRİŞ VE METİN KUTULARI
    ========================================================= */
 .main .stTextInput input, 
 .main .stTextArea textarea, 
