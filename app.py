@@ -42,122 +42,86 @@ CURRENT_YEAR = suanki_zaman().year
 st.markdown("""
 <style>
 
-/* =========================================================
-   SOL ÜST SIDEBAR AÇMA BUTONU
-   ========================================================= */
-
-/* Streamlit'in sidebar kapalıyken gösterdiği buton */
-[data-testid="stSidebarCollapsedControl"] {
-    display: flex !important;
+/* Streamlit sidebar kontrolünü zorla görünür yap */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapsedControl"] > button {
     visibility: visible !important;
     opacity: 1 !important;
+    display: flex !important;
+}
 
+/* Sol üstteki buton */
+[data-testid="stSidebarCollapsedControl"] {
     position: fixed !important;
     left: 10px !important;
     top: 10px !important;
+    z-index: 999999999 !important;
 
-    width: 38px !important;
-    height: 38px !important;
+    width: 40px !important;
+    height: 40px !important;
 
-    z-index: 999999 !important;
-
-    background: #0072bc !important;
+    background-color: #0072bc !important;
     border: 1px solid #005b94 !important;
     border-radius: 7px !important;
 
     align-items: center !important;
     justify-content: center !important;
 
-    box-shadow: 0 2px 8px rgba(0,0,0,.20) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25) !important;
 }
 
-/* Butonun içindeki ikon */
-[data-testid="stSidebarCollapsedControl"] button {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-
-    width: 100% !important;
-    height: 100% !important;
-
-    align-items: center !important;
-    justify-content: center !important;
-
-    background: transparent !important;
-    border: none !important;
+/* Buton */
+[data-testid="stSidebarCollapsedControl"] > button {
+    width: 40px !important;
+    height: 40px !important;
     padding: 0 !important;
-}
-
-/* Ok ikonu */
-[data-testid="stSidebarCollapsedControl"] svg {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-
-    width: 21px !important;
-    height: 21px !important;
-
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-}
-
-/* =========================================================
-   SIDEBAR AÇIKKEN KAPATMA BUTONU
-   ========================================================= */
-
-[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-
-    width: 36px !important;
-    height: 36px !important;
-
-    align-items: center !important;
-    justify-content: center !important;
+    margin: 0 !important;
 
     background: transparent !important;
     border: none !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
-[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] svg {
-    display: block !important;
+/* İkon */
+[data-testid="stSidebarCollapsedControl"] svg {
+    width: 22px !important;
+    height: 22px !important;
+    color: white !important;
+    fill: white !important;
+    stroke: white !important;
     visibility: visible !important;
     opacity: 1 !important;
-
-    width: 20px !important;
-    height: 20px !important;
-
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
 }
 
-/* =========================================================
-   SAĞ ÜST GEREKSİZ STREAMLIT MENÜLERİ
-   ========================================================= */
+/* Sidebar açıkken kapatma butonu */
+[data-testid="stSidebar"] button[kind="header"] {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
 
-[data-testid="stToolbar"],
-[data-testid="stHeaderActionElements"],
-#MainMenu,
+/* Sağ üst Streamlit menüsü */
+[data-testid="stToolbar"] {
+    display: none !important;
+}
+
+[data-testid="stHeaderActionElements"] {
+    display: none !important;
+}
+
+#MainMenu {
+    display: none !important;
+}
+
 footer {
     display: none !important;
-    visibility: hidden !important;
 }
 
-/* Header tamamen kaybolmasın; sidebar butonu çalışmaya devam etsin */
-header {
-    background: transparent !important;
-}
-
-/* =========================================================
-   SIDEBAR
-   ========================================================= */
-
+/* Sidebar */
 [data-testid="stSidebar"] {
-    background: #0072bc !important;
-    border-right: none !important;
+    background-color: #0072bc !important;
 }
 
 </style>
