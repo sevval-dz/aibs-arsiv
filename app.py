@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import base64
 import io
 import os
@@ -11,14 +11,23 @@ import zipfile
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(
-    page_title="Aygaz Arşiv Sistemi",
-    page_icon="Aygaz.png",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Türkiye Saati (UTC+3) ve Türkçe Ay Tanımları
+TR_TZ = timezone(timedelta(hours=3))
 
-DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
+TR_AYLAR = {
+    1: "Oca", 2: "Şub", 3: "Mar", 4: "Nis", 5: "May", 6: "Haz",
+    7: "Tem", 8: "Ağu", 9: "Eyl", 10: "Eki", 11: "Kas", 12: "Ara"
+}
+
+def suanki_zaman():
+    return datetime.now(TR_TZ)
+
+def formatli_tarih():
+    now = suanki_zaman()
+    ay = TR_AYLAR[now.month]
+    return f"{now.day:02d} {ay} {now.year} · {now.strftime('%H:%M')}"
+
+CURRENT_YEAR = suanki_zaman().year
 
 CURRENT_YEAR = datetime.now().year
 
