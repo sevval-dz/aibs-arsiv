@@ -41,40 +41,62 @@ CURRENT_YEAR = suanki_zaman().year
 
 st.markdown("""
 <style>
-/* Sol menü açma butonunu katmanların en önüne çıkar ve görünür yap */
-[data-testid="stSidebarCollapseButton"],
+/* 1. MENÜ KAPALIYKEN: Butonu sol üste çivile, Aygaz mavisi yap ve en öne al */
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"],
-header [data-testid="stSidebarCollapsedControl"],
-button[aria-label="Open sidebar"],
-button[aria-label="Close sidebar"] {
+[data-testid="stExpandSidebarButton"],
+header button[aria-label*="sidebar" i],
+header button[aria-label*="Sidebar" i] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    z-index: 999999 !important;
-}
-
-/* Menü kapalıyken sol üstte beliren butonun kutusu ve konumu */
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"],
-button[aria-label="Open sidebar"] {
-    background-color: #ffffff !important;
-    border: 1px solid #b9d8eb !important;
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    z-index: 9999999 !important;
+    background-color: #0072bc !important;
+    border: 1px solid #005b94 !important;
     border-radius: 6px !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.08) !important;
+    width: 36px !important;
+    height: 36px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
 }
 
-/* Ok simgesini görünür yap ve mavi renge boya */
+/* Kapalıyken butonun içindeki beyaz ok ikonu */
 [data-testid="stSidebarCollapsedControl"] svg,
 [data-testid="collapsedControl"] svg,
-button[aria-label="Open sidebar"] svg {
-    fill: #0072bc !important;
-    stroke: #0072bc !important;
-    color: #0072bc !important;
+[data-testid="stExpandSidebarButton"] svg,
+header button[aria-label*="sidebar" i] svg,
+header button[aria-label*="Sidebar" i] svg {
     display: block !important;
+    visibility: visible !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+    width: 20px !important;
+    height: 20px !important;
 }
 
-/* Sağ üstteki GitHub, Paylaş ve Menü araçlarını gizle */
+/* 2. MENÜ AÇIKKEN: Sidebar içindeki kapatma butonunu görünür tut */
+[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebar"] button[aria-label*="sidebar" i],
+[data-testid="stSidebar"] button[aria-label*="Sidebar" i] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] svg,
+[data-testid="stSidebar"] button[aria-label*="sidebar" i] svg {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+}
+
+/* Sağ üstteki gereksiz araç çubuklarını gizle */
 [data-testid="stToolbar"],
 [data-testid="stHeaderActionElements"],
 #MainMenu,
