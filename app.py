@@ -293,7 +293,33 @@ def wordmark_data_uri():
 
 st.markdown("""
 <style>
-/* Tabloyu ve Hücreleri Beyaz, Başlıkları Aygaz Mavisi Yap */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root { 
+    --ink: #17232d; 
+    --muted: #687984; 
+    --line: #d8e2e8; 
+    --paper: #f5f8fa; 
+    --white: #ffffff; 
+    --aygaz: #0072bc; 
+    --aygaz-dark: #005b94; 
+    --teal: #148b80; 
+    --teal-hover: #0f6c63;
+    --orange: #d47d36; 
+}
+
+html, body, [class*="css"] { 
+    font-family: 'DM Sans', sans-serif; 
+}
+
+.stApp { 
+    background: var(--paper); 
+    color: var(--ink); 
+}
+
+/* =========================================================
+   1. TABLO TASARIMI
+   ========================================================= */
 table, table *, .dataframe, .dataframe *, [data-testid="stTable"] * {
     background-color: #ffffff !important;
     color: #0f172a !important;
@@ -317,47 +343,148 @@ table td, .dataframe td, [data-testid="stTable"] td {
 table tr:hover td, .dataframe tr:hover td {
     background-color: #f1f5f9 !important;
 }
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-:root { --ink:#17232d; --muted:#687984; --line:#d8e2e8; --paper:#f5f8fa; --white:#fff; --aygaz:#0072bc; --aygaz-dark:#005b94; --teal:#147d72; --orange:#d47d36; }
-html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
-.stApp { background:var(--paper); color:var(--ink); }
-[data-testid="stSidebar"] { background:#0072bc; border-right:0; }
-[data-testid="stSidebar"] * { color:#ffffff !important; }
-[data-testid="stSidebar"] div[data-baseweb="select"] > div { background:#ffffff !important; border-radius:7px !important; }
-[data-testid="stSidebar"] div[data-baseweb="select"] > div,
-[data-testid="stSidebar"] div[data-baseweb="select"] > div > div,
-[data-testid="stSidebar"] div[data-baseweb="select"] > div > div > div,
+
+[data-testid="stDataFrame"] { 
+    background: #ffffff !important; 
+    border: 1px solid #b9d8eb !important; 
+    border-radius: 7px;
+}
+[data-testid="stDataFrame"] iframe { background: #ffffff !important; }
+[data-testid="stDataFrame"] [role="columnheader"] { background: #0072bc !important; color: #ffffff !important; }
+[data-testid="stDataFrame"] [role="gridcell"] { background: #ffffff !important; color: #17232d !important; }
+
+/* =========================================================
+   2. SOL MENÜ (SIDEBAR) & KULLANICI KUTUSU (3. FOTOĞRAF DÜZELTMESİ)
+   ========================================================= */
+[data-testid="stSidebar"] { 
+    background: #0072bc; 
+    border-right: 0; 
+}
+
+[data-testid="stSidebar"] * { 
+    color: #ffffff; 
+}
+
+/* Sol menüdeki Kullanıcı Seçim Kutusu Arka Planı ve SİYAH Yazı */
+[data-testid="stSidebar"] div[data-baseweb="select"] > div { 
+    background: #ffffff !important; 
+    border-radius: 7px !important; 
+    border: 1px solid #ffffff !important;
+}
+
 [data-testid="stSidebar"] div[data-baseweb="select"] span,
 [data-testid="stSidebar"] div[data-baseweb="select"] p,
-[data-testid="stSidebar"] div[data-baseweb="select"] input { color:#005696 !important; -webkit-text-fill-color:#005696 !important; font-weight:600 !important; opacity:1 !important; text-shadow:none !important; }
-[data-testid="stSidebar"] div[data-baseweb="select"] svg { fill:#005696 !important; color:#005696 !important; stroke:#005696 !important; }
-[data-testid="stSidebar"] hr { border-color:#5aa6d2; }
-[data-testid="stSidebar"] .stRadio label { padding:9px 11px; border-radius:7px; }
-[data-testid="stSidebar"] .stRadio label:hover { background:#29434b; }
-[data-testid="stDataFrame"] { background:#ffffff !important; border:1px solid #b9d8eb !important; }
-[data-testid="stDataFrame"] iframe { background:#ffffff !important; }
-[data-testid="stDataFrame"] [role="columnheader"] { background:#0072bc !important; color:#ffffff !important; }
-[data-testid="stDataFrame"] [role="gridcell"] { background:#ffffff !important; color:#17232d !important; }
-h1,h2,h3,h4 { color:var(--ink) !important; letter-spacing:0 !important; }
-h1 { font-size:30px !important; } h2 { font-size:21px !important; } h3 { font-size:16px !important; }
-p, label, .stCaption { color:var(--muted); }
-.brand { padding:10px 0 25px; } .brand-mark { font-family:'Space Mono'; color:#ffffff; font-size:18px; letter-spacing:2px; }
-.brand-name { color:white; font-size:21px; font-weight:700; margin-top:8px; } .brand-meta { color:#d9effb; font-size:11px; margin-top:3px; }
-.topbar { background:white; border-bottom:1px solid var(--line); margin:-1rem -1rem 25px; padding:14px 28px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 10px rgba(20,49,67,.04); }
-.aygaz-lockup { display:flex; align-items:center; gap:11px; color:var(--aygaz-dark); font-size:17px; font-weight:700; letter-spacing:.2px; }
-.aygaz-symbol { width:29px; height:29px; border-radius:7px; background:var(--aygaz); display:grid; place-items:center; color:white; font-family:'Space Mono'; font-size:14px; font-weight:700; box-shadow:inset 0 -3px 0 rgba(0,0,0,.12); }
-.topbar-user { display:flex; align-items:center; gap:9px; color:var(--ink); font-size:12px; font-weight:600; }
-.topbar-user-dot { width:28px; height:28px; border-radius:50%; background:#e3f0f8; color:var(--aygaz-dark); display:grid; place-items:center; font-family:'Space Mono'; font-size:10px; }
-.scope { background:#eaf4fa; border:1px solid #c9e2f2; color:#075b91; border-radius:5px; padding:8px 11px; font-size:12px; margin-bottom:17px; }
-.eyebrow { font-family:'Space Mono'; color:var(--teal); font-size:11px; letter-spacing:1.4px; text-transform:uppercase; }
-.page-head { display:flex; justify-content:space-between; align-items:end; margin:4px 0 22px; } .page-head p { margin:4px 0 0; font-size:13px; }
-.stamp { border:1px solid var(--line); background:white; padding:9px 13px; border-radius:7px; font-family:'Space Mono'; font-size:11px; color:var(--muted); }
-.metric { background:white; border:1px solid var(--line); border-radius:8px; padding:16px 17px; min-height:103px; }
-.metric-label { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:700; } .metric-value { color:var(--ink); font-size:27px; font-weight:700; margin:8px 0 2px; } .metric-note { color:var(--muted); font-size:11px; }
-.panel { background:white; border:1px solid var(--line); border-radius:8px; padding:18px; } .panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; } .panel-title { font-size:15px; font-weight:700; color:var(--ink); }
-.mono { font-family:'Space Mono'; } .hint { background:#e6f3ef; border-left:3px solid var(--teal); padding:11px 13px; border-radius:4px; font-size:12px; color:#24544d; } .risk { background:#fff3e8; border-left:3px solid var(--orange); padding:11px 13px; border-radius:4px; font-size:12px; color:#75451f; }
-.stButton button, .stDownloadButton button { border-radius:6px; font-weight:600; border:1px solid var(--line); min-height:38px; color:var(--ink) !important; } .stButton button[kind="primary"] { background:#148b80 !important; border-color:#148b80 !important; color:#ffffff !important; text-shadow:none !important; } .stButton button[kind="primary"] p { color:#ffffff !important; }
-.stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea { border-radius:6px; } [data-testid="stDataFrame"] { border:1px solid var(--line); border-radius:7px; }
+[data-testid="stSidebar"] div[data-baseweb="select"] div,
+[data-testid="stSidebar"] div[data-baseweb="select"] input { 
+    color: #000000 !important; 
+    -webkit-text-fill-color: #000000 !important; 
+    font-weight: 600 !important; 
+    opacity: 1 !important; 
+}
+
+[data-testid="stSidebar"] div[data-baseweb="select"] svg { 
+    fill: #000000 !important; 
+    color: #000000 !important; 
+    stroke: #000000 !important; 
+}
+
+[data-testid="stSidebar"] hr { border-color: #5aa6d2; }
+[data-testid="stSidebar"] .stRadio label { padding: 9px 11px; border-radius: 7px; }
+[data-testid="stSidebar"] .stRadio label:hover { background: #29434b; }
+
+/* =========================================================
+   3. TÜM BUTONLAR (2. FOTOĞRAFTAKİ TURKUAZ/YEŞİL RENK)
+   ========================================================= */
+/* Excel İndir, Form Butonları, Mesaj Kaydet vb. tüm butonları 2. fotoğraftaki renge eşitler */
+.stButton button, 
+.stDownloadButton button, 
+.stFormSubmitButton button,
+div[data-testid="stFormSubmitButton"] > button { 
+    background-color: var(--teal) !important; 
+    border: 1px solid var(--teal) !important; 
+    border-radius: 6px !important; 
+    font-weight: 600 !important; 
+    min-height: 38px !important; 
+    color: #ffffff !important; 
+    box-shadow: none !important;
+}
+
+.stButton button *, 
+.stDownloadButton button *, 
+.stFormSubmitButton button *,
+div[data-testid="stFormSubmitButton"] > button * { 
+    color: #ffffff !important; 
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+.stButton button:hover, 
+.stDownloadButton button:hover, 
+.stFormSubmitButton button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover { 
+    background-color: var(--teal-hover) !important; 
+    border-color: var(--teal-hover) !important; 
+    color: #ffffff !important; 
+}
+
+/* =========================================================
+   4. FORM GİRİŞ VE METİN KUTULARI (1, 4 ve 5. FOTOĞRAFLAR)
+   ========================================================= */
+.main .stTextInput input, 
+.main .stTextArea textarea, 
+.main div[data-baseweb="select"] > div { 
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+.main .stTextInput input:focus, 
+.main .stTextArea textarea:focus {
+    border-color: var(--teal) !important;
+    box-shadow: 0 0 0 1px var(--teal) !important;
+}
+
+.main .stTextInput input::placeholder, 
+.main .stTextArea textarea::placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+
+/* =========================================================
+   5. BAŞLIK, PANEL VE DİĞER BİLEŞENLER
+   ========================================================= */
+h1, h2, h3, h4 { color: var(--ink) !important; letter-spacing: 0 !important; }
+h1 { font-size: 30px !important; } 
+h2 { font-size: 21px !important; } 
+h3 { font-size: 16px !important; }
+p, label, .stCaption { color: var(--muted); }
+
+.brand { padding: 10px 0 25px; } 
+.brand-mark { font-family: 'Space Mono'; color: #ffffff; font-size: 18px; letter-spacing: 2px; }
+.brand-name { color: white; font-size: 21px; font-weight: 700; margin-top: 8px; } 
+.brand-meta { color: #d9effb; font-size: 11px; margin-top: 3px; }
+
+.topbar { background: white; border-bottom: 1px solid var(--line); margin: -1rem -1rem 25px; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(20,49,67,.04); }
+.aygaz-lockup { display: flex; align-items: center; gap: 11px; color: var(--aygaz-dark); font-size: 17px; font-weight: 700; letter-spacing: .2px; }
+.aygaz-symbol { width: 29px; height: 29px; border-radius: 7px; background: var(--aygaz); display: grid; place-items: center; color: white; font-family: 'Space Mono'; font-size: 14px; font-weight: 700; box-shadow: inset 0 -3px 0 rgba(0,0,0,.12); }
+.topbar-user { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 12px; font-weight: 600; }
+.topbar-user-dot { width: 28px; height: 28px; border-radius: 50%; background: #e3f0f8; color: var(--aygaz-dark); display: grid; place-items: center; font-family: 'Space Mono'; font-size: 10px; }
+.scope { background: #eaf4fa; border: 1px solid #c9e2f2; color: #075b91; border-radius: 5px; padding: 8px 11px; font-size: 12px; margin-bottom: 17px; }
+.eyebrow { font-family: 'Space Mono'; color: var(--teal); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; }
+.page-head { display: flex; justify-content: space-between; align-items: end; margin: 4px 0 22px; } 
+.page-head p { margin: 4px 0 0; font-size: 13px; }
+.stamp { border: 1px solid var(--line); background: white; padding: 9px 13px; border-radius: 7px; font-family: 'Space Mono'; font-size: 11px; color: var(--muted); }
+.metric { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 16px 17px; min-height: 103px; }
+.metric-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; } 
+.metric-value { color: var(--ink); font-size: 27px; font-weight: 700; margin: 8px 0 2px; } 
+.metric-note { color: var(--muted); font-size: 11px; }
+.panel { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 18px; } 
+.panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; } 
+.panel-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.mono { font-family: 'Space Mono'; } 
+.hint { background: #e6f3ef; border-left: 3px solid var(--teal); padding: 11px 13px; border-radius: 4px; font-size: 12px; color: #24544d; } 
+.risk { background: #fff3e8; border-left: 3px solid var(--orange); padding: 11px 13px; border-radius: 4px; font-size: 12px; color: #75451f; }
 </style>
 """, unsafe_allow_html=True)
 
