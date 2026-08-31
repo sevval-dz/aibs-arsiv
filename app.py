@@ -19,40 +19,42 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
-/* 1. Sağ üstteki Streamlit menü ve dekorasyonunu gizle */
-[data-testid="stToolbar"],
-[data-testid="stDecoration"] {
+/* Sağ üstteki menü ve araç çubuklarını gizle */
+[data-testid="stToolbar"], [data-testid="stDecoration"] {
     display: none !important;
 }
 
-/* 2. Menü açıkken sol üstteki KAPATMA okunu görünür ve aktif tut */
+/* Menü açıkken sol üstteki KAPATMA okunu görünür tut */
 [data-testid="stSidebarCollapseButton"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    cursor: pointer !important;
 }
 
-/* 3. Menü kapandığında sol üstte belirecek AÇMA butonunu en öne sabitle */
+/* Menü kapandığında sol üstte belirecek AÇMA butonunu beyaz üst çubuğun en önüne sabitle */
 [data-testid="stSidebarCollapsedControl"],
-div[data-testid="stSidebarCollapsedControl"],
-button[data-testid="stSidebarCollapsedControl"] {
+[data-testid="collapsedControl"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     position: fixed !important;
     top: 14px !important;
     left: 14px !important;
-    z-index: 99999999 !important;
-    background-color: #0072bc !important;
-    border-radius: 6px !important;
-    padding: 4px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
-    cursor: pointer !important;
+    z-index: 999999999 !important;
 }
 
-/* Açma butonunun içindeki oku beyaza boya */
-[data-testid="stSidebarCollapsedControl"] svg {
+/* Açma butonunun arka planı ve içindeki beyaz ok */
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="collapsedControl"] button {
+    background-color: #0072bc !important;
+    border-radius: 6px !important;
+    border: none !important;
+    padding: 6px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="collapsedControl"] svg {
     fill: #ffffff !important;
     stroke: #ffffff !important;
     color: #ffffff !important;
