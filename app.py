@@ -17,80 +17,111 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# --- 1. ARAYÜZ VE SİDEBAR KONTROL CSS ---
 st.markdown("""
 <style>
-/* Header alanını şeffaf yap, arkadaki butonları engellemesin */
-header[data-testid="stHeader"] {
-    background: transparent !important;
-    pointer-events: none !important;
-}
-
-/* Sağ üstteki gereksiz Streamlit butonlarını gizle */
-[data-testid="stToolbar"], [data-testid="stDecoration"] {
+/* 1. Sağ üstteki Streamlit menü ve dekorasyonunu gizle */
+[data-testid="stToolbar"],
+[data-testid="stDecoration"] {
     display: none !important;
 }
 
-/* Sol üstteki menü AÇMA butonunu görünür, mavi ve tıklanabilir yap */
-[data-testid="stSidebarCollapsedControl"] {
+/* 2. Menü açıkken sol üstteki KAPATMA okunu görünür ve aktif tut */
+[data-testid="stSidebarCollapseButton"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* 3. Menü kapandığında sol üstte belirecek AÇMA butonunu en öne sabitle */
+[data-testid="stSidebarCollapsedControl"],
+div[data-testid="stSidebarCollapsedControl"],
+button[data-testid="stSidebarCollapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     position: fixed !important;
-    top: 10px !important;
-    left: 10px !important;
+    top: 14px !important;
+    left: 14px !important;
     z-index: 99999999 !important;
-}
-
-[data-testid="stSidebarCollapsedControl"] button {
     background-color: #0072bc !important;
-    border: none !important;
     border-radius: 6px !important;
+    padding: 4px !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
-    padding: 6px !important;
+    cursor: pointer !important;
 }
 
+/* Açma butonunun içindeki oku beyaza boya */
 [data-testid="stSidebarCollapsedControl"] svg {
     fill: #ffffff !important;
     stroke: #ffffff !important;
     color: #ffffff !important;
 }
+</style>
+""", unsafe_allow_html=True)
 
-/* Menü açıkken KAPATMA okunu görünür tut */
-[data-testid="stSidebarCollapseButton"] {
-    display: flex !important;
-    visibility: visible !important;
+DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
+
+CURRENT_YEAR = datetime.now().year
+
+st.markdown("""
+<style>
+/* 1. TÜM BUTONLAR (Mavi zemin, beyaz yazı - sabit) */
+div.stButton, div[data-testid="stButton"], 
+div.stDownloadButton, div[data-testid="stDownloadButton"],
+div.stFormSubmitButton, div[data-testid="stFormSubmitButton"] {
+    background: transparent !important;
+    padding: 0px !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
-/* Buton stilleri */
 div.stButton > button,
 div[data-testid="stButton"] > button,
 div.stDownloadButton > button,
 div[data-testid="stDownloadButton"] > button,
 div.stFormSubmitButton > button,
-div[data-testid="stFormSubmitButton"] > button {
+div[data-testid="stFormSubmitButton"] > button,
+button[data-testid^="baseButton"] {
     background-color: #005691 !important;
+    background: #005691 !important;
     border: none !important;
+    outline: none !important;
     border-radius: 6px !important;
     font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+div.stButton > button *,
+div[data-testid="stButton"] > button *,
+div.stDownloadButton > button *,
+div[data-testid="stDownloadButton"] > button *,
+div.stFormSubmitButton > button *,
+div[data-testid="stFormSubmitButton"] > button *,
+button[data-testid^="baseButton"] * {
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
 div.stButton > button:hover,
+div[data-testid="stButton"] > button:hover,
 div.stDownloadButton > button:hover,
-div.stFormSubmitButton > button:hover {
+div[data-testid="stDownloadButton"] > button:hover,
+div.stFormSubmitButton > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover,
+button[data-testid^="baseButton"]:hover {
     background-color: #004070 !important;
+    background: #004070 !important;
 }
 
-/* Kullanıcı Seçim Kutusu */
+/* 2. KULLANICI KUTUSU & GİRDİ ALANLARI (Beyaz zemin, SİYAH yazı, görünür ok) */
 div[data-baseweb="select"] > div,
 div[data-testid="stTextInput"] > div > div {
     background-color: #ffffff !important;
     border-radius: 6px !important;
 }
 
+/* Kutunun içindeki ismi kesin olarak SİYAH yap */
 div[data-baseweb="select"] *,
 div[data-testid="stSelectbox"] *,
 div[data-testid="stTextInput"] input,
@@ -99,17 +130,16 @@ input, select, textarea {
     -webkit-text-fill-color: #000000 !important;
 }
 
+/* Sağdaki açılır oku koru ve siyah yap */
 div[data-baseweb="select"] svg,
 div[data-testid="stSelectbox"] svg {
+    display: block !important;
+    visibility: visible !important;
     fill: #000000 !important;
     color: #000000 !important;
 }
 </style>
 """, unsafe_allow_html=True)
-
-DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
-CURRENT_YEAR = datetime.now().year
-
 def get_db():
     connection = sqlite3.connect(DB_PATH, timeout=30)
     connection.execute("PRAGMA foreign_keys = ON")
@@ -124,22 +154,22 @@ def init_database():
         CREATE TABLE IF NOT EXISTS series (id INTEGER PRIMARY KEY, name TEXT NOT NULL, unit_code TEXT, unit_name TEXT, series_code TEXT NOT NULL UNIQUE, retention_year INTEGER, legal_basis TEXT);
         CREATE TABLE IF NOT EXISTS user_permissions (id INTEGER PRIMARY KEY, username TEXT, full_name TEXT, unit_code TEXT, auth_codes TEXT, role_desc TEXT);
         CREATE TABLE IF NOT EXISTS aygaz_main_archive (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            doc_reg_no TEXT,
-            doc_no TEXT,
-            doc_name TEXT,
-            series_code TEXT,
-            unit_code TEXT,
-            first_doc_date TEXT,
-            last_doc_date TEXT,
-            box_no TEXT,
-            shelf_no TEXT,
-            institution TEXT,
-            status TEXT,
-            destruction_status TEXT DEFAULT 'BEKLİYOR',
-            destruction_date TEXT,
-            retention_end_year INTEGER
-        );
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    doc_reg_no TEXT,
+    doc_no TEXT,
+    doc_name TEXT,
+    series_code TEXT,
+    unit_code TEXT,
+    first_doc_date TEXT,
+    last_doc_date TEXT,
+    box_no TEXT,
+    shelf_no TEXT,
+    institution TEXT,
+    status TEXT,
+    destruction_status TEXT DEFAULT 'BEKLİYOR',
+    destruction_date TEXT,
+    retention_end_year INTEGER
+);
         CREATE TABLE IF NOT EXISTS archive_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, req_no TEXT, requester TEXT, unit_code TEXT, doc_item TEXT, delivery_type TEXT, urgency TEXT, status TEXT, notes TEXT, created_at TEXT);
         CREATE TABLE IF NOT EXISTS request_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, req_no TEXT, sender TEXT, message TEXT, created_at TEXT);
         CREATE TABLE IF NOT EXISTS archive_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, user TEXT, action_type TEXT, details TEXT);
@@ -169,7 +199,6 @@ def init_database():
         (9, "TİCARİ BAYİLİK VE MÜLKİYET SÖZLEŞMELERİ", "1004", "MUHASEBE MÜDÜRLÜĞÜ", "9", 100, "Süresiz Saklama"),
         (11, "İŞ SAĞLIĞI VE AMBARLI TEFTİŞ RAPORLARI", "1008", "İŞLETME MÜHENDİSLİK YATIRIMLAR MÜDÜRLÜĞÜ", "11", 15, "6331 Sayılı İSGK"),
     ])
-    
     request_columns = {row[1] for row in cursor.execute("PRAGMA table_info(archive_requests)")}
     if "unit_code" not in request_columns:
         cursor.execute("ALTER TABLE archive_requests ADD COLUMN unit_code TEXT")
@@ -179,9 +208,7 @@ def init_database():
         cursor.execute("ALTER TABLE archive_requests ADD COLUMN notes TEXT")
         if "description" in request_columns:
             cursor.execute("UPDATE archive_requests SET notes = description WHERE notes IS NULL")
-    
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_request_queue ON archive_requests (unit_code, status, created_at)")
-    
     cursor.execute("""
         UPDATE user_permissions
         SET auth_codes = CASE
@@ -205,31 +232,51 @@ def init_database():
         ])
     connection.commit()
     
+        # İmha ve durum sütunları kontrolü
     cursor.execute("PRAGMA table_info(aygaz_main_archive)")
     archive_cols = [row[1] for row in cursor.fetchall()]
+
     if "destruction_date" not in archive_cols:
-        try: cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_date TEXT")
-        except sqlite3.OperationalError: pass
+        try:
+            cursor.execute(
+                "ALTER TABLE aygaz_main_archive ADD COLUMN destruction_date TEXT"
+            )
+        except sqlite3.OperationalError:
+            pass
+
     if "destruction_status" not in archive_cols:
-        try: cursor.execute("ALTER TABLE aygaz_main_archive ADD COLUMN destruction_status TEXT DEFAULT 'BEKLİYOR'")
-        except sqlite3.OperationalError: pass
+        try:
+            cursor.execute(
+                "ALTER TABLE aygaz_main_archive "
+                "ADD COLUMN destruction_status TEXT DEFAULT 'BEKLİYOR'"
+            )
+        except sqlite3.OperationalError:
+            pass
 
     connection.commit()
     connection.close()
-
 def mark_record_as_destroyed(record_no, user):
     conn = get_db()
     cursor = conn.cursor()
+
     today_str = datetime.now().strftime("%d.%m.%Y")
+
     cursor.execute("""
         UPDATE aygaz_main_archive 
         SET destruction_status = 'İMHA EDİLDİ',
             destruction_date = ?
         WHERE doc_reg_no = ?
     """, (today_str, str(record_no)))
+
     conn.commit()
     conn.close()
-    audit(user, "Belge imha", f"Kayıt No {record_no} · İMHA EDİLDİ · {today_str}")
+
+    audit(
+        user,
+        "Belge imha",
+        f"Kayıt No {record_no} · İMHA EDİLDİ · {today_str}"
+    )
+
     st.cache_data.clear()
 
 def get_destroyed_records(year_filter=None):
@@ -256,7 +303,6 @@ def convert_df_to_excel(df):
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Imha_Listesi')
     return output.getvalue()
-
 def read_df(query, params=()):
     connection = get_db()
     try:
@@ -264,11 +310,13 @@ def read_df(query, params=()):
     finally:
         connection.close()
 
+
 def audit(user, action, details):
     connection = get_db()
     connection.execute("INSERT INTO archive_audit (timestamp, user, action_type, details) VALUES (?, ?, ?, ?)", (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), user, action, details))
     connection.commit()
     connection.close()
+
 
 def excel_bytes(sheets):
     sheet_names = [str(name)[:31] for name in sheets]
@@ -306,13 +354,16 @@ def excel_bytes(sheets):
             archive.writestr(f"xl/worksheets/sheet{index}.xml", sheet_xml)
     return output.getvalue()
 
+
 def download_excel(label, dataframe, filename, sheet_name="Arşiv Kataloğu", extra_sheets=None):
     sheets = {sheet_name: dataframe}
     if extra_sheets:
         sheets.update(extra_sheets)
     st.download_button(label, excel_bytes(sheets), filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+
 init_database()
+
 
 def logo_data_uri():
     base_path = Path(__file__).resolve().parent
@@ -322,6 +373,7 @@ def logo_data_uri():
         return f"data:image/png;base64,{encoded_logo}"
     return ""
 
+
 def wordmark_data_uri():
     base_path = Path(__file__).resolve().parent
     wordmark_path = base_path / "aygaz_logo.jpg"
@@ -330,13 +382,14 @@ def wordmark_data_uri():
         return f"data:image/jpeg;base64,{encoded_wordmark}"
     return ""
 
-# Tablo ve Görsel Arayüz CSS
 st.markdown("""
 <style>
+/* Tabloyu ve Hücreleri Beyaz, Başlıkları Aygaz Mavisi Yap */
 table, table *, .dataframe, .dataframe *, [data-testid="stTable"] * {
     background-color: #ffffff !important;
     color: #0f172a !important;
 }
+
 table th, .dataframe th, [data-testid="stTable"] th {
     background-color: #005696 !important;
     color: #ffffff !important;
@@ -344,11 +397,16 @@ table th, .dataframe th, [data-testid="stTable"] th {
     padding: 10px 12px !important;
     border: none !important;
 }
+
 table td, .dataframe td, [data-testid="stTable"] td {
     background-color: #ffffff !important;
     color: #0f172a !important;
     padding: 8px 12px !important;
     border-bottom: 1px solid #e2e8f0 !important;
+}
+
+table tr:hover td, .dataframe tr:hover td {
+    background-color: #f1f5f9 !important;
 }
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 :root { --ink:#17232d; --muted:#687984; --line:#d8e2e8; --paper:#f5f8fa; --white:#fff; --aygaz:#0072bc; --aygaz-dark:#005b94; --teal:#147d72; --orange:#d47d36; }
@@ -357,20 +415,28 @@ html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
 [data-testid="stSidebar"] { background:#0072bc; border-right:0; }
 [data-testid="stSidebar"] * { color:#ffffff !important; }
 [data-testid="stSidebar"] div[data-baseweb="select"] > div { background:#ffffff !important; border-radius:7px !important; }
+[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+[data-testid="stSidebar"] div[data-baseweb="select"] > div > div,
+[data-testid="stSidebar"] div[data-baseweb="select"] > div > div > div,
 [data-testid="stSidebar"] div[data-baseweb="select"] span,
 [data-testid="stSidebar"] div[data-baseweb="select"] p,
-[data-testid="stSidebar"] div[data-baseweb="select"] input { color:#005696 !important; -webkit-text-fill-color:#005696 !important; font-weight:600 !important; }
-[data-testid="stSidebar"] div[data-baseweb="select"] svg { fill:#005696 !important; color:#005696 !important; }
+[data-testid="stSidebar"] div[data-baseweb="select"] input { color:#005696 !important; -webkit-text-fill-color:#005696 !important; font-weight:600 !important; opacity:1 !important; text-shadow:none !important; }
+[data-testid="stSidebar"] div[data-baseweb="select"] svg { fill:#005696 !important; color:#005696 !important; stroke:#005696 !important; }
 [data-testid="stSidebar"] hr { border-color:#5aa6d2; }
+[data-testid="stSidebar"] .stRadio label { padding:9px 11px; border-radius:7px; }
+[data-testid="stSidebar"] .stRadio label:hover { background:#29434b; }
 [data-testid="stDataFrame"] { background:#ffffff !important; border:1px solid #b9d8eb !important; }
+[data-testid="stDataFrame"] iframe { background:#ffffff !important; }
+[data-testid="stDataFrame"] [role="columnheader"] { background:#0072bc !important; color:#ffffff !important; }
+[data-testid="stDataFrame"] [role="gridcell"] { background:#ffffff !important; color:#17232d !important; }
 h1,h2,h3,h4 { color:var(--ink) !important; letter-spacing:0 !important; }
 h1 { font-size:30px !important; } h2 { font-size:21px !important; } h3 { font-size:16px !important; }
 p, label, .stCaption { color:var(--muted); }
 .brand { padding:10px 0 25px; } .brand-mark { font-family:'Space Mono'; color:#ffffff; font-size:18px; letter-spacing:2px; }
 .brand-name { color:white; font-size:21px; font-weight:700; margin-top:8px; } .brand-meta { color:#d9effb; font-size:11px; margin-top:3px; }
 .topbar { background:white; border-bottom:1px solid var(--line); margin:-1rem -1rem 25px; padding:14px 28px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 10px rgba(20,49,67,.04); }
-.aygaz-lockup { display:flex; align-items:center; gap:11px; color:var(--aygaz-dark); font-size:17px; font-weight:700; }
-.aygaz-symbol { width:29px; height:29px; border-radius:7px; background:var(--aygaz); display:grid; place-items:center; color:white; font-family:'Space Mono'; font-size:14px; font-weight:700; }
+.aygaz-lockup { display:flex; align-items:center; gap:11px; color:var(--aygaz-dark); font-size:17px; font-weight:700; letter-spacing:.2px; }
+.aygaz-symbol { width:29px; height:29px; border-radius:7px; background:var(--aygaz); display:grid; place-items:center; color:white; font-family:'Space Mono'; font-size:14px; font-weight:700; box-shadow:inset 0 -3px 0 rgba(0,0,0,.12); }
 .topbar-user { display:flex; align-items:center; gap:9px; color:var(--ink); font-size:12px; font-weight:600; }
 .topbar-user-dot { width:28px; height:28px; border-radius:50%; background:#e3f0f8; color:var(--aygaz-dark); display:grid; place-items:center; font-family:'Space Mono'; font-size:10px; }
 .scope { background:#eaf4fa; border:1px solid #c9e2f2; color:#075b91; border-radius:5px; padding:8px 11px; font-size:12px; margin-bottom:17px; }
@@ -380,81 +446,179 @@ p, label, .stCaption { color:var(--muted); }
 .metric { background:white; border:1px solid var(--line); border-radius:8px; padding:16px 17px; min-height:103px; }
 .metric-label { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:700; } .metric-value { color:var(--ink); font-size:27px; font-weight:700; margin:8px 0 2px; } .metric-note { color:var(--muted); font-size:11px; }
 .panel { background:white; border:1px solid var(--line); border-radius:8px; padding:18px; } .panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; } .panel-title { font-size:15px; font-weight:700; color:var(--ink); }
-.mono { font-family:'Space Mono'; } .hint { background:#e6f3ef; border-left:3px solid var(--teal); padding:11px 13px; border-radius:4px; font-size:12px; color:#24544d; }
+.mono { font-family:'Space Mono'; } .hint { background:#e6f3ef; border-left:3px solid var(--teal); padding:11px 13px; border-radius:4px; font-size:12px; color:#24544d; } .risk { background:#fff3e8; border-left:3px solid var(--orange); padding:11px 13px; border-radius:4px; font-size:12px; color:#75451f; }
+.stButton button, .stDownloadButton button { border-radius:6px; font-weight:600; border:1px solid var(--line); min-height:38px; color:var(--ink) !important; } .stButton button[kind="primary"] { background:#148b80 !important; border-color:#148b80 !important; color:#ffffff !important; text-shadow:none !important; } .stButton button[kind="primary"] p { color:#ffffff !important; }
+.stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea { border-radius:6px; } [data-testid="stDataFrame"] { border:1px solid var(--line); border-radius:7px; }
 </style>
 """, unsafe_allow_html=True)
 
 users_df = read_df("SELECT username, full_name, unit_code, auth_codes, role_desc FROM user_permissions ORDER BY id")
-
 def normalize_auth_codes(auth_codes):
-    if auth_codes is None: return set()
-    return {code.strip().upper() for code in str(auth_codes).split(",") if code.strip()}
+    if auth_codes is None:
+        return set()
+
+    return {
+        code.strip().upper()
+        for code in str(auth_codes).split(",")
+        if code.strip()
+    }
+
 
 def has_permission(user_row, permission):
     permission = permission.strip().upper()
+
     auth_codes = normalize_auth_codes(user_row["auth_codes"])
-    if "*" in auth_codes or "ADMIN" in auth_codes: return True
+
+    if "*" in auth_codes or "ADMIN" in auth_codes:
+        return True
+
     return permission in auth_codes
+
 
 def is_admin_user(user_row):
     role = str(user_row["role_desc"] or "").strip().lower()
     unit = str(user_row["unit_code"] or "").strip().upper()
     auth_codes = normalize_auth_codes(user_row["auth_codes"])
-    return (unit == "ALL" or "admin" in role or "yönetici" in role or "ADMIN" in auth_codes or "*" in auth_codes)
+
+    return (
+        unit == "ALL"
+        or "admin" in role
+        or "yönetici" in role
+        or "ADMIN" in auth_codes
+        or "*" in auth_codes
+    )
 
 def can_manage_requests(user_row):
-    return (is_admin_user(user_row) or has_permission(user_row, "TALEP_YONETIM") or has_permission(user_row, "REQUEST_MANAGE"))
+    return (
+        is_admin_user(user_row)
+        or has_permission(user_row, "TALEP_YONETIM")
+        or has_permission(user_row, "REQUEST_MANAGE")
+    )
+
 
 def can_manage_destruction(user_row):
-    return (is_admin_user(user_row) or has_permission(user_row, "IMHA") or has_permission(user_row, "DESTRUCTION"))
+    return (
+        is_admin_user(user_row)
+        or has_permission(user_row, "IMHA")
+        or has_permission(user_row, "DESTRUCTION")
+    )
+
 
 def can_view_audit(user_row):
-    return (is_admin_user(user_row) or has_permission(user_row, "DENETIM") or has_permission(user_row, "AUDIT"))
-
+    return (
+        is_admin_user(user_row)
+        or has_permission(user_row, "DENETIM")
+        or has_permission(user_row, "AUDIT")
+    )
 with st.sidebar:
     sidebar_wordmark = wordmark_data_uri()
     sidebar_brand = (
-        f'<img src="{sidebar_wordmark}" alt="AYGAZ" style="width:148px;height:auto;display:block;margin:0 0 12px -4px">'
-        if sidebar_wordmark else '<div class="brand-mark">AYGAZ</div>'
+        f'<img src="{sidebar_wordmark}" alt="AYGAZ" '
+        f'style="width:148px;height:auto;display:block;margin:0 0 12px -4px">'
+        if sidebar_wordmark
+        else '<div class="brand-mark">AYGAZ</div>'
     )
-    st.markdown(f'<div class="brand">{sidebar_brand}<div class="brand-name">Arşiv Sistemi</div><div class="brand-meta">AMBARLI OPERASYON MERKEZİ</div></div>', unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div class="brand">{sidebar_brand}'
+        f'<div class="brand-name">Arşiv Sistemi</div>'
+        f'<div class="brand-meta">AMBARLI OPERASYON MERKEZİ</div></div>',
+        unsafe_allow_html=True
+    )
 
     if users_df.empty:
         st.error("user_permissions tablosunda kullanıcı bulunamadı.")
         st.stop()
 
-    user_labels = [f"{row.full_name} · {row.unit_code}" for row in users_df.itertuples()]
-    configured_user = os.getenv("AIBS_USER", "").casefold()
-    default_index = next((index for index, row in enumerate(users_df.itertuples()) if str(row.username).casefold() == configured_user), 0)
+    user_labels = [
+        f"{row.full_name} · {row.unit_code}"
+        for row in users_df.itertuples()
+    ]
 
-    selected_user = st.selectbox("Kullanıcı", user_labels, index=default_index, label_visibility="visible")
+    configured_user = os.getenv("AIBS_USER", "").casefold()
+
+    default_index = next(
+        (
+            index
+            for index, row in enumerate(users_df.itertuples())
+            if str(row.username).casefold() == configured_user
+        ),
+        0
+    )
+
+    selected_user = st.selectbox(
+        "Kullanıcı",
+        user_labels,
+        index=default_index,
+        label_visibility="visible"
+    )
+
     active_row = users_df.iloc[user_labels.index(selected_user)]
     active_name = active_row["full_name"]
     active_unit = active_row["unit_code"]
     active_user = active_row["username"]
     is_admin = is_admin_user(active_row)
 
-    st.caption(f"{active_row['role_desc']} · {active_unit}")
+    st.caption(
+        f"{active_row['role_desc']} · {active_unit}"
+    )
+
     st.markdown("---")
 
-    menu_options = ["Katalog", "Erişim Talepleri"]
+    menu_options = [
+        "Katalog",
+        "Erişim Talepleri"
+    ]
+
     if is_admin:
-        menu_options.extend(["Tanımlar", "Saklama ve imha", "Günlükler"])
+        menu_options.extend([
+            "Tanımlar",
+            "Saklama ve imha",
+            "Günlükler"
+        ])
+
     if can_view_audit(active_row):
         menu_options.append("Denetim izi")
 
-    menu = st.radio("Çalışma alanı", menu_options, label_visibility="visible")
+    menu = st.radio(
+        "Çalışma alanı",
+        menu_options,
+        label_visibility="visible"
+    )
+
     st.markdown("---")
+
     st.caption("Sistem durumu")
-    st.markdown('<div style="color:#ffffff;font-size:12px;font-weight:600;">Veritabanı bağlı</div>', unsafe_allow_html=True)
-    st.caption(datetime.now().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M"))
+
+    st.markdown(
+        '<div style="color:#ffffff;font-size:12px;font-weight:600;">'
+        'Veritabanı bağlı'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        datetime.now().strftime(
+            "Son senkronizasyon  %d.%m.%Y · %H:%M"
+        )
+    )
+
 
 user_initial = active_name[:1].upper() if active_name else "K"
 scope_label = "Tüm birimler" if active_unit == "ALL" else f"Birim kapsamı: {active_unit}"
 logo_src = logo_data_uri()
 logo_markup = f'<img src="{logo_src}" alt="Aygaz logosu" style="width:34px;height:34px;object-fit:contain">' if logo_src else '<div class="aygaz-symbol">A</div>'
 st.markdown(f'<div class="topbar"><div class="aygaz-lockup">{logo_markup}<span>AYGAZ ARŞİV SİSTEMİ</span></div><div class="topbar-user"><div class="topbar-user-dot">{user_initial}</div><span>{active_name}</span><span class="mono" style="color:#687984;font-size:10px">{scope_label}</span></div></div>', unsafe_allow_html=True)
-st.markdown('<div class="scope"><strong>DEMONSTRASYON SÜRÜMÜ</strong> · Bu sürüm test ve sunum amaçlıdır. Üretim ortamına alınmadan önce kurumsal kimlik doğrulama, yetkilendirme, veri güvenliği ve kapsamlı denetim/loglama mekanizmaları uygulanmalıdır.</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="scope">'
+    '<strong>DEMONSTRASYON SÜRÜMÜ</strong> · '
+    'Bu sürüm test ve sunum amaçlıdır. Üretim ortamına alınmadan önce '
+    'kurumsal kimlik doğrulama, yetkilendirme, veri güvenliği ve kapsamlı '
+    'denetim/loglama mekanizmaları uygulanmalıdır.'
+    '</div>',
+    unsafe_allow_html=True
+)
+
 
 scope_sql = " AND unit_code = ?" if active_unit != "ALL" else ""
 scope_params = (active_unit,) if active_unit != "ALL" else ()
@@ -463,8 +627,10 @@ open_requests = read_df("SELECT COUNT(*) AS value FROM archive_requests WHERE st
 custody_count = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHERE status = 'Zimmette'" + scope_sql, scope_params).iloc[0]["value"]
 retention_count = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHERE retention_end_year <= ? AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ')" + scope_sql, (CURRENT_YEAR,) + scope_params).iloc[0]["value"]
 
+
 def header(title, description):
     st.markdown(f'<div class="page-head"><div><div class="eyebrow">AYGAZ ARŞİV SİSTEMİ / {menu.upper()}</div><h1>{title}</h1><p>{description}</p></div><div class="stamp">{datetime.now().strftime("%d %b %Y · %H:%M")}</div></div>', unsafe_allow_html=True)
+
 
 if menu == "Katalog":
     header("Arşiv kataloğu", "Belgeyi adıyla değil, fiziksel hayat döngüsüyle bulun.")
@@ -484,22 +650,26 @@ if menu == "Katalog":
         query = "SELECT doc_reg_no AS [Kayıt No], doc_no AS [Dosya No], doc_name AS [Belge], series_code AS [Seri], unit_code AS [Birim], first_doc_date AS [İlk Evrak Tarihi], last_doc_date AS [Son Evrak Tarihi], box_no AS [Kutu No], shelf_no AS [Yer No], institution AS [Kurum], status AS [Durum], destruction_status AS [İmha Durumu], retention_end_year AS [Saklama Sonu] FROM aygaz_main_archive WHERE 1=1"
         params = []
         if active_unit != "ALL": 
-            query += " AND unit_code = ?"; params.append(active_unit)
+            query += " AND unit_code = ?"; 
+            params.append(active_unit)
+        
         if search.strip(): 
-            query += " AND (doc_reg_no LIKE ? OR doc_no LIKE ? OR doc_name LIKE ? OR box_no LIKE ? OR shelf_no LIKE ?)"; params.extend([f"%{search.strip()}%"] * 5)
+            query += " AND (doc_reg_no LIKE ? OR doc_no LIKE ? OR doc_name LIKE ? OR box_no LIKE ? OR shelf_no LIKE ?)"; 
+            params.extend([f"%{search.strip()}%"] * 5)
         if status == "İmha Listesinde":
             query += " AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') AND CAST(retention_end_year AS INTEGER) <= ?"
             params.append(CURRENT_YEAR)
         elif status != "Tümü":
-            query += " AND status = ?"; params.append(status)
-        if unit.strip() and active_unit == "ALL": 
-            query += " AND unit_code LIKE ?"; params.append(f"%{unit.strip()}%")
+            query += " AND status = ?"
+            params.append(status)
             
+        if unit.strip() and active_unit == "ALL": 
+            query += " AND unit_code LIKE ?"; 
+            params.append(f"%{unit.strip()}%")
         catalog_df = read_df(query + " ORDER BY id DESC LIMIT ?", params + [limit])
         st.dataframe(catalog_df, width="stretch", hide_index=True, height=390)
         st.caption(f"{len(catalog_df)} kayıt gösteriliyor · Filtreler doğrudan arşiv kataloğuna uygulanıyor")
         download_excel("Katalog Excel indir", catalog_df, "aygaz-arsiv-katalog.xlsx")
-        
         if is_admin:
             with st.expander("Yeni arşiv kaydı"):
                 with st.form("new_archive_record"):
@@ -526,34 +696,19 @@ if menu == "Katalog":
             selected_reg = st.selectbox("İncelenecek kayıt", catalog_df["Kayıt No"].tolist(), label_visibility="collapsed")
             selected = catalog_df[catalog_df["Kayıt No"] == selected_reg].iloc[0]
             st.markdown(f'<div class="eyebrow">KAYIT / {selected["Kayıt No"]}</div><h3>{selected["Belge"]}</h3><p><b>Fiziksel konum</b><br><span class="mono">KUTU {selected["Kutu No"]} · RAF {selected["Yer No"]}</span></p><p><b>Birim</b> {selected["Birim"]}<br><b>Seri</b> {selected["Seri"]}</p><div style="color:#1472bc;font-weight:700">● {selected["Durum"]}</div>', unsafe_allow_html=True)
-            if st.button("Bu kayıt için talep aç", type="primary", width="stretch"): 
-                st.session_state["request_doc"] = f"#{selected['Kayıt No']} · {selected['Belge']}"
-                st.session_state["request_open"] = True
-                st.rerun()
-        else: 
-            st.info("Filtrelere uyan kayıt bulunamadı.")
+            if st.button("Bu kayıt için talep aç", type="primary", width="stretch"): st.session_state["request_doc"] = f"#{selected['Kayıt No']} · {selected['Belge']}"; st.session_state["request_open"] = True; st.rerun()
+        else: st.info("Filtrelere uyan kayıt bulunamadı.")
         st.markdown("</div>", unsafe_allow_html=True)
-        
     if st.session_state.get("request_open"):
         st.markdown("### Yeni erişim talebi")
         with st.form("catalog_request"):
             c1, c2 = st.columns(2)
-            with c1: 
-                request_doc = st.text_input("Kayıt", value=st.session_state.get("request_doc", ""), disabled=True)
-                request_type = st.selectbox("Erişim biçimi", ["Fiziksel zimmet", "Dijital tarama (PDF)"])
-            with c2: 
-                request_urgency = st.selectbox("Öncelik", ["Normal", "Acil", "Kritik"])
-                request_note = st.text_area("Gerekçe", placeholder="İnceleme amacı veya teslim notu...")
+            with c1: request_doc = st.text_input("Kayıt", value=st.session_state.get("request_doc", ""), disabled=True); request_type = st.selectbox("Erişim biçimi", ["Fiziksel zimmet", "Dijital tarama (PDF)"])
+            with c2: request_urgency = st.selectbox("Öncelik", ["Normal", "Acil", "Kritik"]); request_note = st.text_area("Gerekçe", placeholder="İnceleme amacı veya teslim notu...")
             if st.form_submit_button("Talebi kuyruğa al", type="primary"):
                 request_no = f"TR-{uuid.uuid4().hex[:8].upper()}"
-                connection = get_db()
-                connection.execute("INSERT INTO archive_requests (req_no, requester, unit_code, doc_item, delivery_type, urgency, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (request_no, active_name, active_unit, request_doc, request_type, request_urgency, "Onay Bekliyor", request_note, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-                connection.commit()
-                connection.close()
-                audit(active_user, "Talep oluşturma", f"{request_no} · {request_doc}")
-                st.session_state["request_open"] = False
-                st.success(f"{request_no} numaralı talep kuyruğa alındı.")
-                st.rerun()
+                connection = get_db(); connection.execute("INSERT INTO archive_requests (req_no, requester, unit_code, doc_item, delivery_type, urgency, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (request_no, active_name, active_unit, request_doc, request_type, request_urgency, "Onay Bekliyor", request_note, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))); connection.commit(); connection.close()
+                audit(active_user, "Talep oluşturma", f"{request_no} · {request_doc}"); st.session_state["request_open"] = False; st.success(f"{request_no} numaralı talep kuyruğa alındı."); st.rerun()
 
 elif menu == "Tanımlar" and is_admin:
     header("Tanımlar", "Mevcut Aygaz arşiv sınıflandırmasını bozmadan kurum, birim ve seri kayıtlarını incele.")
@@ -611,82 +766,212 @@ elif menu == "Tanımlar" and is_admin:
                     connection.execute("INSERT INTO institutions (name, code) VALUES (?, ?)", (new_institution_name.strip(), new_institution_code.strip()))
                     connection.commit(); connection.close(); audit(active_user, "Kurum tanımı", f"{new_institution_code} · {new_institution_name}"); st.success("Kurum kaydedildi."); st.rerun()
 
+
 elif menu == "Erişim Talepleri":
     header("Erişim talepleri", "Arşiv belgelerine yönelik erişim taleplerini takip et ve yönet.")
+
+    # Talep yönetme yetkisi olan kullanıcılar tüm talepleri görür.
+    # Diğer kullanıcılar yalnızca kendi taleplerini görür.
     can_manage = can_manage_requests(active_row)
+
     filter_sql = "" if can_manage else " AND requester = ?"
     filter_params = () if can_manage else (active_name,)
 
-    queue_df = read_df("""
-        SELECT id, req_no AS [Talep], requester AS [Talep Eden], unit_code AS [Birim], doc_item AS [Kayıt], delivery_type AS [Teslim], urgency AS [Öncelik], status AS [Durum], created_at AS [Oluşturuldu], notes AS [Not]
-        FROM archive_requests WHERE 1=1 """ + filter_sql + " ORDER BY id DESC", filter_params)
+    queue_df = read_df(
+        """
+        SELECT
+            id,
+            req_no AS [Talep],
+            requester AS [Talep Eden],
+            unit_code AS [Birim],
+            doc_item AS [Kayıt],
+            delivery_type AS [Teslim],
+            urgency AS [Öncelik],
+            status AS [Durum],
+            created_at AS [Oluşturuldu],
+            notes AS [Not]
+        FROM archive_requests
+        WHERE 1=1
+        """ + filter_sql + """
+        ORDER BY id DESC
+        """,
+        filter_params
+    )
 
+    # Özet bilgiler
     q1, q2, q3 = st.columns(3)
-    q1.metric("Toplam talep", len(queue_df))
-    q2.metric("Onay bekleyen", int((queue_df["Durum"] == "Onay Bekliyor").sum()) if not queue_df.empty else 0)
-    q3.metric("Acil işler", int(queue_df["Öncelik"].isin(["Acil", "Kritik"]).sum()) if not queue_df.empty else 0)
+
+    q1.metric(
+        "Toplam talep",
+        len(queue_df)
+    )
+
+    q2.metric(
+        "Onay bekleyen",
+        int(
+            (queue_df["Durum"] == "Onay Bekliyor").sum()
+        ) if not queue_df.empty else 0
+    )
+
+    q3.metric(
+        "Acil işler",
+        int(
+            queue_df["Öncelik"].isin(["Acil", "Kritik"]).sum()
+        ) if not queue_df.empty else 0
+    )
+
     st.markdown("<br>", unsafe_allow_html=True)
 
     if queue_df.empty:
         st.info("Görüntülenecek talep bulunmamaktadır.")
+
     else:
-        st.dataframe(queue_df.drop(columns=["id"], errors="ignore"), width="stretch", hide_index=True, height=350)
+        st.dataframe(
+            queue_df.drop(columns=["id"], errors="ignore"),
+            width="stretch",
+            hide_index=True,
+            height=350
+        )
+
         st.markdown("### Talep işlemleri")
+
         u1, u2, u3 = st.columns([2, 2, 1])
-        with u1: selected_request = st.selectbox("Talep", queue_df["Talep"].tolist())
-        with u2: new_status = st.selectbox("Yeni durum", ["Onay Bekliyor", "Hazırlanıyor", "Kuryede", "Teslim Edildi", "İptal / Red"])
+
+        with u1:
+            selected_request = st.selectbox(
+                "Talep",
+                queue_df["Talep"].tolist()
+            )
+
+        with u2:
+            new_status = st.selectbox(
+                "Yeni durum",
+                [
+                    "Onay Bekliyor",
+                    "Hazırlanıyor",
+                    "Kuryede",
+                    "Teslim Edildi",
+                    "İptal / Red"
+                ]
+            )
+
         with u3:
             if can_manage:
-                if st.button("Güncelle", type="primary", width="stretch"):
+                if st.button(
+                    "Güncelle",
+                    type="primary",
+                    width="stretch"
+                ):
                     connection = get_db()
-                    connection.execute("UPDATE archive_requests SET status = ? WHERE req_no = ?", (new_status, selected_request))
+
+                    connection.execute(
+                        """
+                        UPDATE archive_requests
+                        SET status = ?
+                        WHERE req_no = ?
+                        """,
+                        (new_status, selected_request)
+                    )
+
                     connection.commit()
                     connection.close()
-                    audit(active_user, "Talep durumu", f"{selected_request} → {new_status}")
+
+                    audit(
+                        active_user,
+                        "Talep durumu",
+                        f"{selected_request} → {new_status}"
+                    )
+
                     st.success("Talep durumu güncellendi.")
                     st.rerun()
             else:
-                st.caption("Talep durumunu yalnızca yetkili kullanıcılar güncelleyebilir.")
+                st.caption(
+                    "Talep durumunu yalnızca yetkili kullanıcılar güncelleyebilir."
+                )
 
         st.markdown("### Talep içi mesajlaşma")
+
         try:
-            message_df = read_df("SELECT * FROM request_messages WHERE req_no = ?", params=[selected_request])
+            message_df = read_df(
+                "SELECT * FROM request_messages WHERE req_no = ?",
+                params=[selected_request]
+            )
+
             if not message_df.empty:
-                st.dataframe(message_df, width="stretch", hide_index=True)
-        except Exception: pass
+                st.dataframe(
+                    message_df,
+                    width="stretch",
+                    hide_index=True
+                )
+
+        except Exception:
+            pass
 
         with st.form("request_message_form"):
-            message = st.text_input("Mesaj", placeholder="Konum, teslimat veya inceleme notu...")
+            message = st.text_input(
+                "Mesaj",
+                placeholder="Konum, teslimat veya inceleme notu..."
+            )
+
             if st.form_submit_button("Mesajı kaydet") and message.strip():
                 connection = get_db()
-                connection.execute("INSERT INTO request_messages (req_no, sender, message, created_at) VALUES (?, ?, ?, ?)", (selected_request, active_name, message.strip(), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+                connection.execute(
+                    """
+                    INSERT INTO request_messages
+                    (req_no, sender, message, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        selected_request,
+                        active_name,
+                        message.strip(),
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                )
+
                 connection.commit()
                 connection.close()
-                audit(active_user, "Talep mesajı", f"{selected_request} talebine mesaj eklendi")
+
+                audit(
+                    active_user,
+                    "Talep mesajı",
+                    f"{selected_request} talebine mesaj eklendi"
+                )
+
                 st.success("Mesaj kaydedildi.")
                 st.rerun()
 
+
 elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
     st.markdown("### Saklama ve İmha Yönetimi")
+
     tab1, tab2 = st.tabs(["Süresi Dolanlar (İmha Bekleyenler)", "İmha Edilen Belgeler Arşivi"])
 
     with tab1:
         st.markdown("#### İmha Edilecek Belgeler Listesi")
         conn = get_db()
         pending_df = pd.read_sql_query("""
-            SELECT doc_reg_no AS 'Kayıt No', doc_no AS 'Dosya No', doc_name AS 'Belge Adı', unit_code AS 'Birim', retention_end_year AS 'İmha Yılı', destruction_status AS 'Durum'
-            FROM aygaz_main_archive 
-            WHERE (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') 
-            AND CAST(retention_end_year AS INTEGER) <= ?
-        """, conn, params=(CURRENT_YEAR,))
+    SELECT doc_reg_no AS 'Kayıt No', 
+           doc_no AS 'Dosya No', 
+           doc_name AS 'Belge Adı', 
+           unit_code AS 'Birim', 
+           retention_end_year AS 'İmha Yılı', 
+           destruction_status AS 'Durum'
+    FROM aygaz_main_archive 
+    WHERE (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') 
+    AND CAST(retention_end_year AS INTEGER) <= ?
+""", conn, params=(CURRENT_YEAR,))
         conn.close()
 
         if not pending_df.empty:
             st.dataframe(pending_df, use_container_width=True)
+            
             st.markdown("---")
             st.markdown("**İmha İşlemi Onayı**")
             col_sel, col_btn = st.columns([3, 1])
-            with col_sel: selected_record = st.selectbox("İmha edilecek belgeyi seçin:", pending_df["Kayıt No"].tolist())
+            with col_sel:
+                selected_record = st.selectbox("İmha edilecek belgeyi seçin:", pending_df["Kayıt No"].tolist())
             with col_btn:
                 st.write("")
                 st.write("")
@@ -700,13 +985,22 @@ elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
     with tab2:
         st.markdown(f"#### {CURRENT_YEAR} Yılı İmha Tutanağı ve Arşivi")
         destroyed_df = get_destroyed_records(year_filter=str(CURRENT_YEAR))
+        
         if not destroyed_df.empty:
             st.dataframe(destroyed_df, use_container_width=True)
+            
             excel_data = convert_df_to_excel(destroyed_df)
-            st.download_button(label=f"{CURRENT_YEAR} İmha Edilen Belgeler Listesini İndir (Excel)", data=excel_data, file_name=f"Aygaz_Imha_Edilen_Belgeler_{CURRENT_YEAR}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+            st.download_button(
+                label=f"{CURRENT_YEAR} İmha Edilen Belgeler Listesini İndir (Excel)",
+                data=excel_data,
+                file_name=f"Aygaz_Imha_Edilen_Belgeler_{CURRENT_YEAR}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
         else:
-            st.info(f"{CURRENT_YEAR} yılı için henüz imha edilmiş bir belge kaydı bulunmuyor.")
-
+            st.info(
+    f"{CURRENT_YEAR} yılı için henüz imha edilmiş bir belge kaydı bulunmuyor."
+)
 elif menu == "Günlükler" and is_admin:
     header("Yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
     unit_report = read_df("SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt], SUM(CASE WHEN status = 'Zimmette' THEN 1 ELSE 0 END) AS [Zimmette], SUM(CASE WHEN retention_end_year <= ? AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') THEN 1 ELSE 0 END) AS [Süre riski] FROM aygaz_main_archive GROUP BY unit_code ORDER BY [Kayıt] DESC", (CURRENT_YEAR,))
@@ -737,5 +1031,5 @@ elif menu == "Denetim izi" and can_view_audit(active_row):
     header("Denetim izi", "Arşivde kim, ne zaman, hangi kararı verdi?")
     audit_df = read_df("SELECT timestamp AS [Zaman], user AS [Kullanıcı], action_type AS [İşlem], details AS [Detay] FROM archive_audit ORDER BY id DESC LIMIT 250")
     st.markdown('<div class="hint">Bu akış kullanıcı işlemlerini gösterir. Talep değişiklikleri ve erişim talepleri zaman damgasıyla tutulur.</div>', unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.dataframe(audit_df, width="stretch", hide_index=True, height=520)
+    st.markdown("<br>", unsafe_allow_html=True); st.dataframe(audit_df, width="stretch", hide_index=True, height=520)
+
