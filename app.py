@@ -50,7 +50,7 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-""", unsafe_allow_html=True)
+
 DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
 
 CURRENT_YEAR = datetime.now().year
