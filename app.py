@@ -29,11 +29,13 @@ st.markdown("""
     display: none !important;
 }
 /* Sidebar kapalıyken yeniden açma düğmesini görünür tut */
-div[data-testid="collapsedControl"] {
-    display: flex !important;
+[data-testid="stSidebar"] {
+    overflow: visible !important;
+}
+
+[data-testid="stSidebarCollapseButton"] {
     visibility: visible !important;
     opacity: 1 !important;
-    z-index: 999999 !important;
 }
 </style>
 """, unsafe_allow_html=True)
