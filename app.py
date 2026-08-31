@@ -525,7 +525,7 @@ with st.sidebar:
 
     menu_options = [
         "Katalog",
-        "İş kuyruğu"
+        "Erişim Talepleri"
     ]
 
     if is_admin:
@@ -725,8 +725,8 @@ elif menu == "Tanımlar" and is_admin:
                     connection.commit(); connection.close(); audit(active_user, "Kurum tanımı", f"{new_institution_code} · {new_institution_name}"); st.success("Kurum kaydedildi."); st.rerun()
 
 
-elif menu == "İş kuyruğu":
-    header("İş kuyruğu", "Erişim taleplerini önceliklendir, hazırla ve iz bırak.")
+elif menu == "Erişim Talepleri":
+    header("Erişim talepleri", "Arşiv belgelerine yönelik erişim taleplerini takip et ve yönet.")
 
     # Talep yönetme yetkisi olan kullanıcılar tüm talepleri görür.
     # Diğer kullanıcılar yalnızca kendi taleplerini görür.
@@ -760,7 +760,7 @@ elif menu == "İş kuyruğu":
     q1, q2, q3 = st.columns(3)
 
     q1.metric(
-        "Toplam kuyruk",
+        "Toplam talep",
         len(queue_df)
     )
 
