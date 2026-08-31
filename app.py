@@ -662,7 +662,12 @@ def header(title, description):
 
 if menu == "Katalog":
     header("Arşiv kataloğu", "Belgeyi adıyla değil, fiziksel hayat döngüsüyle bulun.")
-    metrics = [("Katalog kaydı", f"{scoped_count:,}", "yetki kapsamındaki kayıtlar"), ("Açık iş", f"{open_requests}", "talep kuyruğunda"), ("Zimmette", f"{custody_count}", "aktif kullanıcı erişimi"), ("Süre riski", f"{retention_count}", f"{CURRENT_YEAR} ve öncesi")]
+    metrics = [
+        ("Toplam Kayıt", f"{scoped_count:,}", "yetki kapsamındaki kayıtlar"),
+        ("Aktif Talep", f"{open_requests}", "işlem kuyruğunda"),
+        ("Zimmette", f"{custody_count}", "kullanıcıda aktif"),
+        ("Süresi Dolan", f"{retention_count}", f"{CURRENT_YEAR} ve öncesi")
+    ]
     columns = st.columns(4)
     for column, (label, value, note) in zip(columns, metrics):
         with column:
@@ -719,7 +724,7 @@ if menu == "Katalog":
                         connection.execute("INSERT INTO aygaz_main_archive (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (new_reg.strip(), new_doc_no.strip(), new_doc_name.strip(), new_series.strip(), new_unit.strip(), new_first_date.strip(), new_last_date.strip(), new_box.strip(), new_shelf.strip(), "AYGAZ", "Depoda", "Edilmedi", CURRENT_YEAR + 10))
                         connection.commit(); connection.close(); audit(active_user, "Arşiv kaydı", f"{new_reg} · {new_doc_name}"); st.success("Arşiv kaydı oluşturuldu."); st.rerun()
     with right:
-        st.markdown('<div class="panel"><div class="panel-head"><div class="panel-title">Kayıt özeti</div><div class="mono">LIVE</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel"><div class="panel-head"><div class="panel-title">Kayıt Detayı</div></div>', unsafe_allow_html=True)
         if not catalog_df.empty:
             selected_reg = st.selectbox("İncelenecek kayıt", catalog_df["Kayıt No"].tolist(), label_visibility="collapsed")
             selected = catalog_df[catalog_df["Kayıt No"] == selected_reg].iloc[0]
