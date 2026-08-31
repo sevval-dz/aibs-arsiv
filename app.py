@@ -19,68 +19,44 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
-
-/* =========================================================
-   STREAMLIT ÜST MENÜ
-   ========================================================= */
-
-/* Sağ üst Streamlit araç çubuğunu gizle */
-[data-testid="stToolbar"] {
-    display: none !important;
-}
-
-/* Üst sağ dekorasyon alanını gizle */
+/* 1. Sağ üstteki Streamlit menü ve dekorasyonunu gizle */
+[data-testid="stToolbar"],
 [data-testid="stDecoration"] {
     display: none !important;
 }
 
-
-/* =========================================================
-   SIDEBAR
-   ========================================================= */
-
-/* Sidebar'ın kendisi */
-[data-testid="stSidebar"] {
-    visibility: visible !important;
-}
-
-/* Sidebar açıkken sol üstteki kapatma oku */
+/* 2. Menü açıkken sol üstteki KAPATMA okunu görünür ve aktif tut */
 [data-testid="stSidebarCollapseButton"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+    cursor: pointer !important;
 }
 
-/* Sidebar kapalıyken sol üstte çıkan yeniden açma düğmesi */
-[data-testid="stSidebarCollapsedControl"] {
+/* 3. Menü kapandığında sol üstte belirecek AÇMA butonunu en öne sabitle */
+[data-testid="stSidebarCollapsedControl"],
+div[data-testid="stSidebarCollapsedControl"],
+button[data-testid="stSidebarCollapsedControl"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    pointer-events: auto !important;
-    z-index: 999999 !important;
+    position: fixed !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 99999999 !important;
+    background-color: #0072bc !important;
+    border-radius: 6px !important;
+    padding: 4px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    cursor: pointer !important;
 }
 
-/* Yeniden açma düğmesinin içindeki buton */
-[data-testid="stSidebarCollapsedControl"] button {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
+/* Açma butonunun içindeki oku beyaza boya */
+[data-testid="stSidebarCollapsedControl"] svg {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+    color: #ffffff !important;
 }
-
-
-/* =========================================================
-   SIDEBAR İÇİNDEKİ KONTROLLER
-   ========================================================= */
-
-/* Sidebar kapat/aç düğmelerinin tıklanabilir kalması */
-[data-testid="stSidebarCollapseButton"] button {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
