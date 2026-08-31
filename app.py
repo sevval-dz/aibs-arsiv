@@ -674,7 +674,7 @@ retention_count = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHER
 
 
 def header(title, description):
-    st.markdown(f'<div class="page-head"><div><div class="eyebrow">AYGAZ ARŞİV SİSTEMİ / {menu.upper()}</div><h1>{title}</h1><p>{description}</p></div><div class="stamp">{datetime.now().strftime("%d %b %Y · %H:%M")}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="page-head"><div><div class="eyebrow">AYGAZ ARŞİV SİSTEMİ / {menu.upper()}</div><h1>{title}</h1><p>{description}</p></div><div class="stamp">{formatli_tarih()}</div></div>', unsafe_allow_html=True)
 
 
 if menu == "Katalog":
