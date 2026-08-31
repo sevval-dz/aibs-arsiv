@@ -41,62 +41,103 @@ CURRENT_YEAR = suanki_zaman().year
 
 st.markdown("""
 <style>
-/* 1. MENÜ KAPALIYKEN: Butonu sol üste çivile, Aygaz mavisi yap ve en öne al */
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"],
-[data-testid="stExpandSidebarButton"],
-header button[aria-label*="sidebar" i],
-header button[aria-label*="Sidebar" i] {
+
+/* =========================================================
+   SOL ÜST SIDEBAR AÇMA BUTONU
+   ========================================================= */
+
+/* Streamlit'in sidebar kapalıyken gösterdiği buton */
+[data-testid="stSidebarCollapsedControl"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+
     position: fixed !important;
-    top: 10px !important;
     left: 10px !important;
-    z-index: 9999999 !important;
-    background-color: #0072bc !important;
+    top: 10px !important;
+
+    width: 38px !important;
+    height: 38px !important;
+
+    z-index: 999999 !important;
+
+    background: #0072bc !important;
     border: 1px solid #005b94 !important;
-    border-radius: 6px !important;
-    width: 36px !important;
-    height: 36px !important;
+    border-radius: 7px !important;
+
     align-items: center !important;
     justify-content: center !important;
-    cursor: pointer !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+
+    box-shadow: 0 2px 8px rgba(0,0,0,.20) !important;
 }
 
-/* Kapalıyken butonun içindeki beyaz ok ikonu */
-[data-testid="stSidebarCollapsedControl"] svg,
-[data-testid="collapsedControl"] svg,
-[data-testid="stExpandSidebarButton"] svg,
-header button[aria-label*="sidebar" i] svg,
-header button[aria-label*="Sidebar" i] svg {
-    display: block !important;
-    visibility: visible !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-    color: #ffffff !important;
-    width: 20px !important;
-    height: 20px !important;
-}
-
-/* 2. MENÜ AÇIKKEN: Sidebar içindeki kapatma butonunu görünür tut */
-[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
-[data-testid="stSidebar"] button[aria-label*="sidebar" i],
-[data-testid="stSidebar"] button[aria-label*="Sidebar" i] {
+/* Butonun içindeki ikon */
+[data-testid="stSidebarCollapsedControl"] button {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
 }
 
-[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] svg,
-[data-testid="stSidebar"] button[aria-label*="sidebar" i] svg {
+/* Ok ikonu */
+[data-testid="stSidebarCollapsedControl"] svg {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    width: 21px !important;
+    height: 21px !important;
+
+    color: #ffffff !important;
     fill: #ffffff !important;
     stroke: #ffffff !important;
-    color: #ffffff !important;
 }
 
-/* Sağ üstteki gereksiz araç çubuklarını gizle */
+/* =========================================================
+   SIDEBAR AÇIKKEN KAPATMA BUTONU
+   ========================================================= */
+
+[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    width: 36px !important;
+    height: 36px !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    background: transparent !important;
+    border: none !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] svg {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    width: 20px !important;
+    height: 20px !important;
+
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+}
+
+/* =========================================================
+   SAĞ ÜST GEREKSİZ STREAMLIT MENÜLERİ
+   ========================================================= */
+
 [data-testid="stToolbar"],
 [data-testid="stHeaderActionElements"],
 #MainMenu,
@@ -104,6 +145,21 @@ footer {
     display: none !important;
     visibility: hidden !important;
 }
+
+/* Header tamamen kaybolmasın; sidebar butonu çalışmaya devam etsin */
+header {
+    background: transparent !important;
+}
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+[data-testid="stSidebar"] {
+    background: #0072bc !important;
+    border-right: none !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 def get_db():
