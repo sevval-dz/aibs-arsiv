@@ -17,7 +17,19 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+st.markdown("""
+<style>
+/* Streamlit sağ üst araç çubuğunu gizle */
+[data-testid="stToolbar"] {
+    display: none !important;
+}
 
+/* Üst sağdaki menü alanını gizle */
+[data-testid="stDecoration"] {
+    display: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
 DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
 
 CURRENT_YEAR = datetime.now().year
