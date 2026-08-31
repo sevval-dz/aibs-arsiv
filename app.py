@@ -38,6 +38,85 @@ def formatli_tarih():
     return f"{now.day:02d} {ay} {now.year} · {now.strftime('%H:%M')}"
 
 CURRENT_YEAR = suanki_zaman().year
+# =========================================================
+# SIDEBAR AÇ / KAPAT BUTONU
+# =========================================================
+
+st.markdown("""
+<style>
+#custom-sidebar-toggle {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    width: 38px;
+    height: 38px;
+    z-index: 999999999;
+    background: #0072bc;
+    border: 1px solid #005b94;
+    border-radius: 7px;
+    color: white;
+    font-size: 22px;
+    line-height: 38px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+</style>
+
+<script>
+(function () {
+
+    function findSidebarButton() {
+
+        const selectors = [
+            '[data-testid="stSidebarCollapseButton"] button',
+            '[data-testid="stSidebarCollapsedControl"] button',
+            '[data-testid="collapsedControl"] button',
+            'button[aria-label="Collapse sidebar"]',
+            'button[aria-label="Expand sidebar"]'
+        ];
+
+        for (const selector of selectors) {
+            const button = window.parent.document.querySelector(selector);
+
+            if (button) {
+                return button;
+            }
+        }
+
+        return null;
+    }
+
+    function createToggle() {
+
+        if (window.parent.document.getElementById("custom-sidebar-toggle")) {
+            return;
+        }
+
+        const button = window.parent.document.createElement("div");
+
+        button.id = "custom-sidebar-toggle";
+        button.innerHTML = "‹";
+
+        button.onclick = function () {
+
+            const sidebarButton = findSidebarButton();
+
+            if (sidebarButton) {
+                sidebarButton.click();
+            }
+        };
+
+        window.parent.document.body.appendChild(button);
+    }
+
+    setTimeout(createToggle, 500);
+    setTimeout(createToggle, 1500);
+    setTimeout(createToggle, 3000);
+
+})();
+</script>
+""", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
