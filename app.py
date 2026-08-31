@@ -24,28 +24,23 @@ CURRENT_YEAR = datetime.now().year
 
 st.markdown("""
 <style>
-[data-testid="stSidebarCollapseButton"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-[data-testid="stSidebarCollapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-[data-testid="stSidebarCollapseButton"] button {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
+/* Sol menü açma/kapatma butonunu aktif ve görünür tut */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"] button,
 [data-testid="stSidebarCollapsedControl"] button {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+}
+
+/* Sağ üstteki GitHub, Düzenle, Paylaş ve Menü araç çubuğunu tamamen gizle */
+[data-testid="stToolbar"],
+[data-testid="stHeaderActionElements"],
+#MainMenu,
+footer {
+    display: none !important;
+    visibility: hidden !important;
 }
 </style>
 """, unsafe_allow_html=True)
