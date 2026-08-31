@@ -17,84 +17,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-st.markdown("""
-<style>
-
-/* =========================================================
-   STREAMLIT SIDEBAR AÇ / KAPAT KONTROLLERİ
-   ========================================================= */
-
-/* Sağ üst Streamlit araç çubuğunu gizle */
-[data-testid="stToolbar"],
-[data-testid="stDecoration"] {
-    display: none !important;
-}
-
-/* Sidebar açıkken görünen SOL ÜST KAPATMA OKU */
-[data-testid="stSidebarCollapseButton"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* Sidebar kapalıyken görünen SOL ÜST AÇMA OKU */
-[data-testid="stSidebarCollapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* Bazı Streamlit sürümlerinde kullanılan alternatif isim */
-[data-testid="collapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* Sidebar açıkken KAPATMA butonunun oku */
-[data-testid="stSidebarCollapseButton"] button {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* Sidebar kapalıyken AÇMA butonunun oku */
-[data-testid="stSidebarCollapsedControl"] button,
-[data-testid="collapsedControl"] button {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* Okların görünür kalmasını sağla */
-[data-testid="stSidebarCollapseButton"] svg,
-[data-testid="stSidebarCollapsedControl"] svg,
-[data-testid="collapsedControl"] svg {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* =========================================================
-   SIDEBAR KENDİSİ
-   ========================================================= */
-
-[data-testid="stSidebar"] {
-    z-index: 999999 !important;
-}
-
-/* Sidebar kapalıyken açma kontrolünün üstte kalması */
-[data-testid="stSidebarCollapsedControl"] {
-    z-index: 9999999 !important;
-}
-
-/* Alternatif collapsed kontrol */
-[data-testid="collapsedControl"] {
-    z-index: 9999999 !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
 
 DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
 
@@ -102,77 +24,28 @@ CURRENT_YEAR = datetime.now().year
 
 st.markdown("""
 <style>
-/* 1. TÜM BUTONLAR (Mavi zemin, beyaz yazı - sabit) */
-div.stButton, div[data-testid="stButton"], 
-div.stDownloadButton, div[data-testid="stDownloadButton"],
-div.stFormSubmitButton, div[data-testid="stFormSubmitButton"] {
-    background: transparent !important;
-    padding: 0px !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-div.stButton > button,
-div[data-testid="stButton"] > button,
-div.stDownloadButton > button,
-div[data-testid="stDownloadButton"] > button,
-div.stFormSubmitButton > button,
-div[data-testid="stFormSubmitButton"] > button,
-button[data-testid^="baseButton"] {
-    background-color: #005691 !important;
-    background: #005691 !important;
-    border: none !important;
-    outline: none !important;
-    border-radius: 6px !important;
-    font-weight: 600 !important;
-    box-shadow: none !important;
-}
-
-div.stButton > button *,
-div[data-testid="stButton"] > button *,
-div.stDownloadButton > button *,
-div[data-testid="stDownloadButton"] > button *,
-div.stFormSubmitButton > button *,
-div[data-testid="stFormSubmitButton"] > button *,
-button[data-testid^="baseButton"] * {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-}
-
-div.stButton > button:hover,
-div[data-testid="stButton"] > button:hover,
-div.stDownloadButton > button:hover,
-div[data-testid="stDownloadButton"] > button:hover,
-div.stFormSubmitButton > button:hover,
-div[data-testid="stFormSubmitButton"] > button:hover,
-button[data-testid^="baseButton"]:hover {
-    background-color: #004070 !important;
-    background: #004070 !important;
-}
-
-/* 2. KULLANICI KUTUSU & GİRDİ ALANLARI (Beyaz zemin, SİYAH yazı, görünür ok) */
-div[data-baseweb="select"] > div,
-div[data-testid="stTextInput"] > div > div {
-    background-color: #ffffff !important;
-    border-radius: 6px !important;
-}
-
-/* Kutunun içindeki ismi kesin olarak SİYAH yap */
-div[data-baseweb="select"] *,
-div[data-testid="stSelectbox"] *,
-div[data-testid="stTextInput"] input,
-input, select, textarea {
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
-}
-
-/* Sağdaki açılır oku koru ve siyah yap */
-div[data-baseweb="select"] svg,
-div[data-testid="stSelectbox"] svg {
-    display: block !important;
+[data-testid="stSidebarCollapseButton"] {
+    display: flex !important;
     visibility: visible !important;
-    fill: #000000 !important;
-    color: #000000 !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stSidebarCollapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stSidebarCollapseButton"] button {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stSidebarCollapsedControl"] button {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 </style>
 """, unsafe_allow_html=True)
