@@ -19,46 +19,80 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
-/* Sağ üstteki menü ve araç çubuklarını gizle */
-[data-testid="stToolbar"], [data-testid="stDecoration"] {
+
+/* =========================================================
+   STREAMLIT SIDEBAR AÇ / KAPAT KONTROLLERİ
+   ========================================================= */
+
+/* Sağ üst Streamlit araç çubuğunu gizle */
+[data-testid="stToolbar"],
+[data-testid="stDecoration"] {
     display: none !important;
 }
 
-/* Menü açıkken sol üstteki KAPATMA okunu görünür tut */
+/* Sidebar açıkken görünen SOL ÜST KAPATMA OKU */
 [data-testid="stSidebarCollapseButton"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
 }
 
-/* Menü kapandığında sol üstte belirecek AÇMA butonunu beyaz üst çubuğun en önüne sabitle */
-[data-testid="stSidebarCollapsedControl"],
+/* Sidebar kapalıyken görünen SOL ÜST AÇMA OKU */
+[data-testid="stSidebarCollapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Bazı Streamlit sürümlerinde kullanılan alternatif isim */
 [data-testid="collapsedControl"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    position: fixed !important;
-    top: 14px !important;
-    left: 14px !important;
-    z-index: 999999999 !important;
 }
 
-/* Açma butonunun arka planı ve içindeki beyaz ok */
+/* Sidebar açıkken KAPATMA butonunun oku */
+[data-testid="stSidebarCollapseButton"] button {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Sidebar kapalıyken AÇMA butonunun oku */
 [data-testid="stSidebarCollapsedControl"] button,
 [data-testid="collapsedControl"] button {
-    background-color: #0072bc !important;
-    border-radius: 6px !important;
-    border: none !important;
-    padding: 6px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
+/* Okların görünür kalmasını sağla */
+[data-testid="stSidebarCollapseButton"] svg,
 [data-testid="stSidebarCollapsedControl"] svg,
 [data-testid="collapsedControl"] svg {
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-    color: #ffffff !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
+
+/* =========================================================
+   SIDEBAR KENDİSİ
+   ========================================================= */
+
+[data-testid="stSidebar"] {
+    z-index: 999999 !important;
+}
+
+/* Sidebar kapalıyken açma kontrolünün üstte kalması */
+[data-testid="stSidebarCollapsedControl"] {
+    z-index: 9999999 !important;
+}
+
+/* Alternatif collapsed kontrol */
+[data-testid="collapsedControl"] {
+    z-index: 9999999 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
