@@ -28,6 +28,12 @@ st.markdown("""
 [data-testid="stDecoration"] {
     display: none !important;
 }
+/* Sidebar kapalıyken yeniden açma düğmesini görünür tut */
+[data-testid="stSidebarCollapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+} 
 </style>
 """, unsafe_allow_html=True)
 DB_PATH = Path(__file__).resolve().with_name("aibs_database.db")
