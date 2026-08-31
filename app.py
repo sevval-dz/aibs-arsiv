@@ -29,23 +29,18 @@ st.markdown("""
     display: none !important;
 }
 
-/* Sidebar */
-[data-testid="stSidebar"] {
-    overflow: visible !important;
-}
-
-/* Sidebar açıkken/kapanırken kontrol düğmesini görünür tut */
+/* Sidebar açık/kapalı kontrolü */
 [data-testid="stSidebarCollapseButton"] {
+    display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    display: flex !important;
 }
 
-/* Sidebar kapalıyken sol üstte çıkan açma düğmesini gizleme */
+/* Sidebar kapalıyken yeniden açma düğmesi */
 [data-testid="stSidebarCollapsedControl"] {
+    display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    display: flex !important;
     z-index: 999999 !important;
 }
 </style>
