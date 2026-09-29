@@ -931,6 +931,7 @@ if menu == "Katalog":
         st.dataframe(catalog_df, width="stretch", hide_index=True, height=390)
         st.caption(f"{len(catalog_df)} kayıt gösteriliyor · Filtreler doğrudan arşiv kataloğuna uygulanıyor")
         download_excel("Katalog Excel indir", catalog_df, "aygaz-arsiv-katalog.xlsx")
+        
         if is_admin:
             with st.expander("Yeni arşiv kaydı"):
                 with st.form("new_archive_record"):
@@ -951,7 +952,8 @@ if menu == "Katalog":
                         connection = get_db()
                         connection.execute("INSERT INTO aygaz_main_archive (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (new_reg.strip(), new_doc_no.strip(), new_doc_name.strip(), new_series.strip(), new_unit.strip(), new_first_date.strip(), new_last_date.strip(), new_box.strip(), new_shelf.strip(), "AYGAZ", "Depoda", "Edilmedi", CURRENT_YEAR + 10))
                         connection.commit(); connection.close(); audit(active_user, "Arşiv kaydı", f"{new_reg} · {new_doc_name}"); st.success("Arşiv kaydı oluşturuldu."); st.rerun()
-                                with st.expander("📥 Toplu Arşiv Kaydı Yükle (Excel/CSV)"):
+
+            with st.expander("📥 Toplu Arşiv Kaydı Yükle (Excel/CSV)"):
                 uploaded_file = st.file_uploader("Eski sistemden dışa aktarılan Excel/CSV dosyasını seçin", type=["xlsx", "xls", "csv"])
                 if uploaded_file:
                     try:
@@ -994,37 +996,7 @@ if menu == "Katalog":
                             st.rerun()
                     except Exception as e:
                         st.error(f"Aktarım sırasında hata oluştu: {e}")
-                        conn = get_db()
-                        cursor = conn.cursor()
-                        success_count = 0
-                        for _, row in import_df.iterrows():
-                            cursor.execute("""
-                                INSERT INTO aygaz_main_archive 
-                                (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (
-                                str(row.get("Kayıt No", "")),
-                                str(row.get("Dosya No", "")),
-                                str(row.get("Belge", row.get("Belge Adı", ""))),
-                                str(row.get("Seri", "1")),
-                                str(row.get("Birim", "1001")),
-                                str(row.get("İlk Evrak Tarihi", "")),
-                                str(row.get("Son Evrak Tarihi", "")),
-                                str(row.get("Kutu No", "")),
-                                str(row.get("Yer No", "")),
-                                str(row.get("Kurum", "AYGAZ A.Ş.")),
-                                str(row.get("Durum", "Depoda")),
-                                "BEKLİYOR",
-                                int(row.get("Saklama Sonu", CURRENT_YEAR + 10))
-                            ))
-                            success_count += 1
-                        conn.commit()
-                        conn.close()
-                        audit(active_user, "Toplu Aktarım", f"{success_count} adet kayıt yüklendi")
-                        st.success(f"{success_count} adet arşiv kaydı başarıyla sisteme aktarıldı!")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Aktarım sırasında hata oluştu: {e}")      
+
     with right:
         st.markdown('<div class="panel"><div class="panel-head"><div class="panel-title">Kayıt Detayı</div></div>', unsafe_allow_html=True)
         if not catalog_df.empty:
@@ -1047,7 +1019,7 @@ if menu == "Katalog":
 
 elif menu == "Tanımlar" and is_admin:
     header("Tanımlar", "Mevcut Aygaz arşiv sınıflandırmasını bozmadan kurum, birim ve seri kayıtlarını incele.")
-    definition_tabs = st.tabs(["Birimler", "Seriler", "Kurumlar"])
+    definition_tabs = st.tabs(["Birimler", "Seriler", "Kurumlar", "Kullanıcılar"])
     with definition_tabs[0]:
         unit_search = st.text_input("Birimlerde ara", placeholder="Birim adı veya kodu...")
         unit_query = "SELECT id AS [ID], name AS [Birim Adı], code AS [Birim Kodu], inst_code AS [Kurum Kodu], inst_name AS [Kurum Adı] FROM units WHERE 1=1"
@@ -1100,6 +1072,21 @@ elif menu == "Tanımlar" and is_admin:
                     connection = get_db()
                     connection.execute("INSERT INTO institutions (name, code) VALUES (?, ?)", (new_institution_name.strip(), new_institution_code.strip()))
                     connection.commit(); connection.close(); audit(active_user, "Kurum tanımı", f"{new_institution_code} · {new_institution_name}"); st.success("Kurum kaydedildi."); st.rerun()
+    with definition_tabs[3]:
+        st.markdown("### Sistem Kullanıcıları")
+        all_users = read_df("SELECT id AS [ID], username AS [Kullanıcı Adı], full_name AS [Ad Soyad], unit_code AS [Birim], auth_codes AS [Yetkiler], role_desc AS [Rol] FROM user_permissions ORDER BY id")
+        st.dataframe(all_users, width="stretch", hide_index=True)
+        with st.expander("👤 Yeni Kullanıcı ve Yetki Tanımla"):
+            with st.form("new_user_form"):
+                u_name = st.text_input("Kullanıcı Adı / Sicil No")
+                u_fullname = st.text_input("Ad Soyad")
+                u_unit = st.text_input("Birim Kodu (Tümü için ALL)")
+                u_role = st.selectbox("Rol Tanımı", ["Arşiv Sorumlusu", "Birim Kullanıcısı", "Yönetici"])
+                u_auth = st.multiselect("Yetki Kodları", ["ADMIN", "TALEP_YONETIM", "IMHA", "DENETIM"], default=["TALEP_YONETIM"])
+                if st.form_submit_button("Kullanıcıyı Kaydet", type="primary") and u_name.strip() and u_fullname.strip():
+                    connection = get_db()
+                    connection.execute("INSERT INTO user_permissions (username, full_name, unit_code, auth_codes, role_desc) VALUES (?, ?, ?, ?, ?)", (u_name.strip(), u_fullname.strip(), u_unit.strip(), ",".join(u_auth), u_role))
+                    connection.commit(); connection.close(); audit(active_user, "Kullanıcı tanımı", f"{u_name} · {u_fullname}"); st.success("Kullanıcı başarıyla kaydedildi."); st.rerun()
 
 elif menu == "Erişim Talepleri":
     header("Erişim talepleri", "Arşiv belgelerine yönelik erişim taleplerini takip et ve yönet.")
