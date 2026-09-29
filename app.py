@@ -166,6 +166,23 @@ def init_database() -> None:
         """)
 
         # Safe migration for older demo databases.
+        # IMPORTANT: CREATE TABLE IF NOT EXISTS does NOT modify an existing
+        # table. Therefore every column added in newer versions must also be
+        # migrated explicitly before any INSERT/SELECT uses it.
+        for name, definition in [
+            ("trigger_event", "TEXT DEFAULT 'Dosyanın kapanışı'"),
+            ("disposition", "TEXT DEFAULT 'İMHA'"),
+            ("confidentiality", "TEXT DEFAULT 'INTERNAL'"),
+            ("active", "INTEGER DEFAULT 1"),
+        ]:
+            ensure_column(conn, "series", name, definition)
+
+        for name, definition in [
+            ("kvkk_category", "TEXT"),
+            ("active", "INTEGER DEFAULT 1"),
+        ]:
+            ensure_column(conn, "retention_schedule", name, definition)
+
         for name, definition in [
             ("classification", "TEXT DEFAULT 'INTERNAL'"), ("personal_data", "INTEGER DEFAULT 0"),
             ("special_category_data", "INTEGER DEFAULT 0"), ("retention_trigger", "TEXT"), ("legal_basis", "TEXT"),
@@ -173,6 +190,14 @@ def init_database() -> None:
             ("metadata_complete", "INTEGER DEFAULT 0"), ("legal_hold_count", "INTEGER DEFAULT 0"),
             ("created_at", "TEXT"), ("updated_at", "TEXT"), ("created_by", "TEXT"), ("updated_by", "TEXT")]:
             ensure_column(conn, "aygaz_main_archive", name, definition)
+
+        # Older versions used slightly different names/fields for users.
+        # Keep the current RBAC model compatible with those databases.
+        for name, definition in [
+            ("external_id", "TEXT"),
+            ("last_login_at", "TEXT"),
+        ]:
+            ensure_column(conn, "users", name, definition)
 
         for sql in [
             "CREATE INDEX IF NOT EXISTS idx_archive_unit_series ON aygaz_main_archive(unit_code,series_code)",
