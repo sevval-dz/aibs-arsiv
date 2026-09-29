@@ -951,6 +951,80 @@ if menu == "Katalog":
                         connection = get_db()
                         connection.execute("INSERT INTO aygaz_main_archive (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (new_reg.strip(), new_doc_no.strip(), new_doc_name.strip(), new_series.strip(), new_unit.strip(), new_first_date.strip(), new_last_date.strip(), new_box.strip(), new_shelf.strip(), "AYGAZ", "Depoda", "Edilmedi", CURRENT_YEAR + 10))
                         connection.commit(); connection.close(); audit(active_user, "Arşiv kaydı", f"{new_reg} · {new_doc_name}"); st.success("Arşiv kaydı oluşturuldu."); st.rerun()
+                                with st.expander("📥 Toplu Arşiv Kaydı Yükle (Excel/CSV)"):
+                uploaded_file = st.file_uploader("Eski sistemden dışa aktarılan Excel/CSV dosyasını seçin", type=["xlsx", "xls", "csv"])
+                if uploaded_file:
+                    try:
+                        if uploaded_file.name.endswith(".csv"):
+                            import_df = pd.read_csv(uploaded_file)
+                        else:
+                            import_df = pd.read_excel(uploaded_file)
+                        
+                        st.write("Yüklenecek Veri Önizlemesi:", import_df.head(3))
+                        
+                        if st.button("Veritabanına Aktarımı Başlat", type="primary"):
+                            conn = get_db()
+                            cursor = conn.cursor()
+                            success_count = 0
+                            for _, row in import_df.iterrows():
+                                cursor.execute("""
+                                    INSERT INTO aygaz_main_archive 
+                                    (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (
+                                    str(row.get("Kayıt No", "")),
+                                    str(row.get("Dosya No", "")),
+                                    str(row.get("Belge", row.get("Belge Adı", ""))),
+                                    str(row.get("Seri", "1")),
+                                    str(row.get("Birim", "1001")),
+                                    str(row.get("İlk Evrak Tarihi", "")),
+                                    str(row.get("Son Evrak Tarihi", "")),
+                                    str(row.get("Kutu No", "")),
+                                    str(row.get("Yer No", "")),
+                                    str(row.get("Kurum", "AYGAZ A.Ş.")),
+                                    str(row.get("Durum", "Depoda")),
+                                    "BEKLİYOR",
+                                    int(row.get("Saklama Sonu", CURRENT_YEAR + 10))
+                                ))
+                                success_count += 1
+                            conn.commit()
+                            conn.close()
+                            audit(active_user, "Toplu Aktarım", f"{success_count} adet kayıt yüklendi")
+                            st.success(f"{success_count} adet arşiv kaydı başarıyla sisteme aktarıldı!")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Aktarım sırasında hata oluştu: {e}")
+                        conn = get_db()
+                        cursor = conn.cursor()
+                        success_count = 0
+                        for _, row in import_df.iterrows():
+                            cursor.execute("""
+                                INSERT INTO aygaz_main_archive 
+                                (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                str(row.get("Kayıt No", "")),
+                                str(row.get("Dosya No", "")),
+                                str(row.get("Belge", row.get("Belge Adı", ""))),
+                                str(row.get("Seri", "1")),
+                                str(row.get("Birim", "1001")),
+                                str(row.get("İlk Evrak Tarihi", "")),
+                                str(row.get("Son Evrak Tarihi", "")),
+                                str(row.get("Kutu No", "")),
+                                str(row.get("Yer No", "")),
+                                str(row.get("Kurum", "AYGAZ A.Ş.")),
+                                str(row.get("Durum", "Depoda")),
+                                "BEKLİYOR",
+                                int(row.get("Saklama Sonu", CURRENT_YEAR + 10))
+                            ))
+                            success_count += 1
+                        conn.commit()
+                        conn.close()
+                        audit(active_user, "Toplu Aktarım", f"{success_count} adet kayıt yüklendi")
+                        st.success(f"{success_count} adet arşiv kaydı başarıyla sisteme aktarıldı!")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Aktarım sırasında hata oluştu: {e}")      
     with right:
         st.markdown('<div class="panel"><div class="panel-head"><div class="panel-title">Kayıt Detayı</div></div>', unsafe_allow_html=True)
         if not catalog_df.empty:
