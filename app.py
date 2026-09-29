@@ -1,27 +1,26 @@
 from __future__ import annotations
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 import base64
 import hashlib
 import io
 import logging
 import os
 from pathlib import Path
+import re
 import sqlite3
 import uuid
+from typing import Any
 
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
 # =========================================================
-# LOGGING & HATA YÖNETİMİ
+# 0. SISTEM VE LOG YAPILANDIRMASI
 # =========================================================
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("AIBS")
+logger = logging.getLogger("AIBS_CORE")
 
-# =========================================================
-# SAYFA VE ALTYAPI YAPILANDIRMASI
-# =========================================================
 st.set_page_config(
     page_title="Aygaz Arşiv Sistemi",
     page_icon="Aygaz.png",
@@ -46,51 +45,119 @@ def formatli_tarih() -> str:
     ay = TR_AYLAR[now.month]
     return f"{now.day:02d} {ay} {now.year} · {now.strftime('%H:%M')}"
 
+def format_db_date(date_val: Any) -> str:
+    if not date_val or pd.isna(date_val):
+        return "-"
+    val_str = str(date_val).strip()
+    if not val_str or val_str.lower() in ("none", "nan", "nat"):
+        return "-"
+    if re.match(r"^\d{4}-\d{2}-\d{2}", val_str):
+        try:
+            parts = val_str[:10].split("-")
+            y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+            ay_adi = TR_AYLAR.get(m, str(m))
+            return f"{d:02d} {ay_adi} {y}"
+        except Exception:
+            return val_str
+    return val_str
+
 CURRENT_YEAR = suanki_zaman().year
 
+if "session_id" not in st.session_state:
+    st.session_state["session_id"] = str(uuid.uuid4())
+SESSION_ID = st.session_state["session_id"]
+
+if "last_viewed_doc" not in st.session_state:
+    st.session_state["last_viewed_doc"] = None
+
+if "last_logged_user" not in st.session_state:
+    st.session_state["last_logged_user"] = None
+
 # =========================================================
-# SIDEBAR BUTONU VE ARAYÜZ (CSS & JS BİREBİR KORUNDU)
+# 1. SIDEBAR BUTONU VE ARAYUZ (CSS & JS)
 # =========================================================
 components.html(
     """
     <script>
     const parentDoc = window.parent.document;
-    function toggleSidebar() {
-        const selectors = [
-            '[data-testid="stSidebarCollapseButton"] button',
-            '[data-testid="stSidebarCollapsedControl"] button',
-            '[data-testid="collapsedControl"] button',
-            'button[aria-label="Collapse sidebar"]',
-            'button[aria-label="Expand sidebar"]'
-        ];
-        for (const selector of selectors) {
-            const button = parentDoc.querySelector(selector);
-            if (button) {
-                button.click();
-                return;
+
+    function getNativeSidebarElements() {
+        const sidebar = parentDoc.querySelector('[data-testid="stSidebar"]');
+        const collapseBtn = parentDoc.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+                            parentDoc.querySelector('button[aria-label="Collapse sidebar"]');
+        const expandBtn = parentDoc.querySelector('[data-testid="stSidebarCollapsedControl"] button') ||
+                          parentDoc.querySelector('[data-testid="collapsedControl"] button') ||
+                          parentDoc.querySelector('button[aria-label="Expand sidebar"]');
+        return { sidebar, collapseBtn, expandBtn };
+    }
+
+    function isSidebarOpen() {
+        const { sidebar, expandBtn } = getNativeSidebarElements();
+        if (sidebar) {
+            const ariaExpanded = sidebar.getAttribute('aria-expanded');
+            if (ariaExpanded === 'true') return true;
+            if (ariaExpanded === 'false') return false;
+            const rect = sidebar.getBoundingClientRect();
+            if (rect.width > 50) return true;
+        }
+        if (expandBtn) {
+            const style = window.getComputedStyle(expandBtn);
+            if (style.display !== 'none' && style.visibility !== 'hidden') {
+                return false;
             }
         }
+        return true;
     }
-    const old = parentDoc.getElementById("aygaz-sidebar-button");
-    if (old) { old.remove(); }
-    const button = parentDoc.createElement("button");
-    button.id = "aygaz-sidebar-button";
-    button.innerHTML = "‹";
-    button.style.position = "fixed";
-    button.style.left = "10px";
-    button.style.top = "10px";
-    button.style.width = "38px";
-    button.style.height = "38px";
-    button.style.zIndex = "999999999";
-    button.style.background = "#0072bc";
-    button.style.color = "#ffffff";
-    button.style.border = "1px solid #005b94";
-    button.style.borderRadius = "7px";
-    button.style.fontSize = "24px";
-    button.style.cursor = "pointer";
-    button.style.boxShadow = "0 2px 8px rgba(0,0,0,.25)";
-    button.onclick = toggleSidebar;
-    parentDoc.body.appendChild(button);
+
+    function updateArrow() {
+        const btn = parentDoc.getElementById("aygaz-sidebar-button");
+        if (!btn) return;
+        const open = isSidebarOpen();
+        btn.innerHTML = open ? "‹" : "›";
+        btn.setAttribute("title", open ? "Menüyü Kapat" : "Menüyü Aç");
+    }
+
+    function toggleSidebar() {
+        const { collapseBtn, expandBtn } = getNativeSidebarElements();
+        const open = isSidebarOpen();
+        if (open && collapseBtn) {
+            collapseBtn.click();
+        } else if (!open && expandBtn) {
+            expandBtn.click();
+        } else {
+            const fallback = collapseBtn || expandBtn;
+            if (fallback) fallback.click();
+        }
+        setTimeout(updateArrow, 120);
+        setTimeout(updateArrow, 300);
+    }
+
+    let btn = parentDoc.getElementById("aygaz-sidebar-button");
+    if (!btn) {
+        btn = parentDoc.createElement("button");
+        btn.id = "aygaz-sidebar-button";
+        btn.style.position = "fixed";
+        btn.style.left = "10px";
+        btn.style.top = "10px";
+        btn.style.width = "38px";
+        btn.style.height = "38px";
+        btn.style.zIndex = "999999999";
+        btn.style.background = "#0072bc";
+        btn.style.color = "#ffffff";
+        btn.style.border = "1px solid #005b94";
+        btn.style.borderRadius = "7px";
+        btn.style.fontSize = "24px";
+        btn.style.lineHeight = "34px";
+        btn.style.textAlign = "center";
+        btn.style.cursor = "pointer";
+        btn.style.boxShadow = "0 2px 8px rgba(0,0,0,.25)";
+        btn.style.transition = "background-color 0.15s ease";
+        btn.onclick = toggleSidebar;
+        parentDoc.body.appendChild(btn);
+    }
+
+    updateArrow();
+    setInterval(updateArrow, 400);
     </script>
     """,
     height=0,
@@ -110,7 +177,7 @@ st.markdown("""
     --aygaz: #0072bc; 
     --aygaz-dark: #005b94; 
     --teal: #148b80; 
-    --teal-hover: #0f6c63;
+    --teal-hover: #0f6c63; 
     --orange: #d47d36; 
 }
 
@@ -268,7 +335,7 @@ p, label, .stCaption { color: var(--muted); }
 """, unsafe_allow_html=True)
 
 # =========================================================
-# VERİTABANI BAĞLANTISI VE MIGRATION MOTORU
+# 2. VERITABANI VE MIGRATION MOTORU
 # =========================================================
 def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=30)
@@ -276,36 +343,58 @@ def get_db() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode = WAL")
     return conn
 
+IDENTIFIER_REGEX = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+ALLOWED_TABLES = {
+    "institutions", "units", "series", "user_permissions",
+    "aygaz_main_archive", "archive_requests", "request_messages",
+    "archive_audit", "schema_migrations"
+}
+
+def validate_identifier(name: str) -> str:
+    if not IDENTIFIER_REGEX.match(name):
+        raise ValueError(f"Geçersiz SQL belirteci: {name}")
+    return name
+
 def get_table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    validate_identifier(table_name)
     cursor = conn.cursor()
     cursor.execute(f"PRAGMA table_info({table_name})")
     return {row[1] for row in cursor.fetchall()}
 
 def ensure_column_exists(conn: sqlite3.Connection, table_name: str, col_name: str, col_type: str) -> None:
+    validate_identifier(table_name)
+    validate_identifier(col_name)
     cols = get_table_columns(conn, table_name)
     if col_name not in cols:
         conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}")
         logger.info(f"Migration: {table_name}.{col_name} kolonu başarıyla eklendi.")
 
-def init_database() -> None:
+def execute_migrations() -> None:
     conn = get_db()
     cursor = conn.cursor()
     try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            )
+        """)
+        
         cursor.executescript("""
             CREATE TABLE IF NOT EXISTS institutions (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
-                code TEXT NOT NULL UNIQUE
+                code TEXT NOT NULL UNIQUE,
+                active INTEGER DEFAULT 1
             );
-
             CREATE TABLE IF NOT EXISTS units (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 code TEXT NOT NULL UNIQUE,
                 inst_code TEXT,
-                inst_name TEXT
+                inst_name TEXT,
+                active INTEGER DEFAULT 1
             );
-
             CREATE TABLE IF NOT EXISTS series (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -313,9 +402,9 @@ def init_database() -> None:
                 unit_name TEXT,
                 series_code TEXT NOT NULL UNIQUE,
                 retention_year INTEGER,
-                legal_basis TEXT
+                legal_basis TEXT,
+                active INTEGER DEFAULT 1
             );
-
             CREATE TABLE IF NOT EXISTS user_permissions (
                 id INTEGER PRIMARY KEY,
                 username TEXT NOT NULL UNIQUE,
@@ -325,7 +414,6 @@ def init_database() -> None:
                 role_desc TEXT,
                 active INTEGER DEFAULT 1
             );
-
             CREATE TABLE IF NOT EXISTS aygaz_main_archive (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 doc_reg_no TEXT NOT NULL UNIQUE,
@@ -343,7 +431,6 @@ def init_database() -> None:
                 destruction_date TEXT,
                 retention_end_year INTEGER
             );
-
             CREATE TABLE IF NOT EXISTS archive_requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 req_no TEXT NOT NULL UNIQUE,
@@ -356,7 +443,6 @@ def init_database() -> None:
                 notes TEXT,
                 created_at TEXT NOT NULL
             );
-
             CREATE TABLE IF NOT EXISTS request_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 req_no TEXT NOT NULL,
@@ -364,7 +450,6 @@ def init_database() -> None:
                 message TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
-
             CREATE TABLE IF NOT EXISTS archive_audit (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
@@ -372,44 +457,54 @@ def init_database() -> None:
                 action_type TEXT NOT NULL,
                 details TEXT,
                 object_id TEXT,
+                session_id TEXT,
                 result TEXT DEFAULT 'SUCCESS',
                 previous_hash TEXT,
                 event_hash TEXT NOT NULL
             );
         """)
 
-        # Migration 1: series tablosu eksik kolonları
+        ensure_column_exists(conn, "institutions", "active", "INTEGER DEFAULT 1")
+        ensure_column_exists(conn, "units", "active", "INTEGER DEFAULT 1")
+        ensure_column_exists(conn, "series", "active", "INTEGER DEFAULT 1")
         ensure_column_exists(conn, "series", "trigger_event", "TEXT DEFAULT 'Dosyanın Kapanışı'")
         ensure_column_exists(conn, "series", "disposition", "TEXT DEFAULT 'İMHA'")
         ensure_column_exists(conn, "series", "confidentiality", "TEXT DEFAULT 'INTERNAL'")
 
-        # Migration 2: user_permissions tablosu eksik kolonları
         ensure_column_exists(conn, "user_permissions", "active", "INTEGER DEFAULT 1")
+        ensure_column_exists(conn, "user_permissions", "created_at", "TEXT")
+        ensure_column_exists(conn, "user_permissions", "updated_at", "TEXT")
+        ensure_column_exists(conn, "user_permissions", "created_by", "TEXT")
+        ensure_column_exists(conn, "user_permissions", "updated_by", "TEXT")
 
-        # Migration 3: aygaz_main_archive tablosu eksik kolonları
         ensure_column_exists(conn, "aygaz_main_archive", "destruction_date", "TEXT")
         ensure_column_exists(conn, "aygaz_main_archive", "destruction_status", "TEXT DEFAULT 'BEKLİYOR'")
         ensure_column_exists(conn, "aygaz_main_archive", "retention_end_year", "INTEGER")
         ensure_column_exists(conn, "aygaz_main_archive", "classification", "TEXT DEFAULT 'INTERNAL'")
         ensure_column_exists(conn, "aygaz_main_archive", "legal_hold", "INTEGER DEFAULT 0")
         ensure_column_exists(conn, "aygaz_main_archive", "legal_hold_reason", "TEXT")
+        ensure_column_exists(conn, "aygaz_main_archive", "legal_hold_by", "TEXT")
+        ensure_column_exists(conn, "aygaz_main_archive", "legal_hold_at", "TEXT")
         ensure_column_exists(conn, "aygaz_main_archive", "destruction_requested_by", "TEXT")
+        ensure_column_exists(conn, "aygaz_main_archive", "destruction_requested_at", "TEXT")
+        ensure_column_exists(conn, "aygaz_main_archive", "destruction_approved_by", "TEXT")
+        ensure_column_exists(conn, "aygaz_main_archive", "destruction_approved_at", "TEXT")
         ensure_column_exists(conn, "aygaz_main_archive", "created_by", "TEXT")
         ensure_column_exists(conn, "aygaz_main_archive", "created_at", "TEXT")
         ensure_column_exists(conn, "aygaz_main_archive", "updated_by", "TEXT")
         ensure_column_exists(conn, "aygaz_main_archive", "updated_at", "TEXT")
 
-        # Migration 4: archive_requests tablosu geriye dönük uyumluluk
         ensure_column_exists(conn, "archive_requests", "unit_code", "TEXT")
         ensure_column_exists(conn, "archive_requests", "notes", "TEXT")
+        ensure_column_exists(conn, "archive_requests", "requester_username", "TEXT")
+        ensure_column_exists(conn, "archive_requests", "doc_reg_no", "TEXT")
 
-        # Migration 5: archive_audit tablosu hash zinciri ve alanları
         ensure_column_exists(conn, "archive_audit", "object_id", "TEXT")
+        ensure_column_exists(conn, "archive_audit", "session_id", "TEXT")
         ensure_column_exists(conn, "archive_audit", "result", "TEXT DEFAULT 'SUCCESS'")
         ensure_column_exists(conn, "archive_audit", "previous_hash", "TEXT")
         ensure_column_exists(conn, "archive_audit", "event_hash", "TEXT")
 
-        # Veri Standardizasyonu: Edilmedi/BEKLİYOR uyumluluğu
         cursor.execute("""
             UPDATE aygaz_main_archive 
             SET destruction_status = 'BEKLİYOR' 
@@ -417,7 +512,13 @@ def init_database() -> None:
                OR UPPER(destruction_status) IN ('EDILMEDI', 'EDİLMEDİ', 'BEKLEMEDE')
         """)
 
-        # Migration sonrası güvenli index oluşturma
+        # DÜZELTME: 90101 kaydının serisini mevcut ve uyumlu seri olan 9 (Muhasebe sözleşmeleri/raporları) ile güncelle
+        cursor.execute("""
+            UPDATE aygaz_main_archive 
+            SET series_code = '9' 
+            WHERE doc_reg_no = '90101' AND (series_code = '6' OR series_code NOT IN (SELECT series_code FROM series))
+        """)
+
         cursor.executescript("""
             CREATE INDEX IF NOT EXISTS idx_archive_search ON aygaz_main_archive (unit_code, series_code, status);
             CREATE INDEX IF NOT EXISTS idx_archive_retention ON aygaz_main_archive (retention_end_year, destruction_status);
@@ -425,14 +526,13 @@ def init_database() -> None:
             CREATE INDEX IF NOT EXISTS idx_audit_time ON archive_audit (timestamp);
         """)
 
-        # Tohum Verileri (Seed Data)
-        cursor.executemany("INSERT OR IGNORE INTO institutions (id, name, code) VALUES (?, ?, ?)", [
+        cursor.executemany("INSERT OR IGNORE INTO institutions (id, name, code, active) VALUES (?, ?, ?, 1)", [
             (1, "AYGAZ A.Ş.", "10"), (11, "ZİNERJİ A.Ş.", "40"),
             (12, "ANADOLU HİSARI TANKERCİLİK", "30"), (13, "AYGAZ DOĞALGAZ", "20"),
             (15, "AKPA A.Ş.", "50"), (17, "GAZAL A.Ş.", "60"),
         ])
 
-        cursor.executemany("INSERT OR IGNORE INTO units (id, name, code, inst_code, inst_name) VALUES (?, ?, ?, ?, ?)", [
+        cursor.executemany("INSERT OR IGNORE INTO units (id, name, code, inst_code, inst_name, active) VALUES (?, ?, ?, ?, ?, 1)", [
             (1, "TANIMSIZ", "0", "10", "AYGAZ A.Ş."),
             (2, "BİLGİ SİSTEM MÜDÜRLÜĞÜ", "1001", "10", "AYGAZ A.Ş."),
             (3, "BÜTÇE PLANLAMA VE KONTROL MÜDÜRLÜĞÜ", "1002", "10", "AYGAZ A.Ş."),
@@ -444,7 +544,7 @@ def init_database() -> None:
             (9, "İŞLETME MÜHENDİSLİK YATIRIMLAR MÜDÜRLÜĞÜ", "1008", "10", "AYGAZ A.Ş."),
         ])
 
-        cursor.executemany("INSERT OR IGNORE INTO series (id, name, unit_code, unit_name, series_code, retention_year, legal_basis, trigger_event) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+        cursor.executemany("INSERT OR IGNORE INTO series (id, name, unit_code, unit_name, series_code, retention_year, legal_basis, trigger_event, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)", [
             (1, "PERSONEL ÖZLÜK DOSYALARI", "1006", "İNSAN KAYNAKLARI MÜDÜRLÜĞÜ", "1", 10, "İş Kanunu Md. 75", "İş İlişkisinin Sona Ermesi"),
             (3, "MAKBUZ VE TAHSİLAT BELGELERİ", "1004", "MUHASEBE MÜDÜRLÜĞÜ", "3", 10, "VUK Md. 253", "Belgenin Düzenlenmesi"),
             (4, "MAHSUP VE YEVMİYE FİŞLERİ", "1004", "MUHASEBE MÜDÜRLÜĞÜ", "4", 10, "TTK Md. 82", "Hesap Döneminin Kapanışı"),
@@ -452,9 +552,10 @@ def init_database() -> None:
             (11, "İŞ SAĞLIĞI VE AMBARLI TEFTİŞ RAPORLARI", "1008", "İŞLETME MÜHENDİSLİK YATIRIMLAR MÜDÜRLÜĞÜ", "11", 15, "6331 Sayılı İSGK", "Rapor Tarihi"),
         ])
 
+        cursor.execute("UPDATE user_permissions SET active = 1 WHERE active IS NULL")
         if cursor.execute("SELECT COUNT(*) FROM user_permissions").fetchone()[0] == 0:
             cursor.execute("INSERT INTO user_permissions (id, username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, ?, 1)", 
-                           (1, "local\\admin", "Arşiv Yöneticisi", "ALL", "ADMIN,TALEP_YONETIM,IMHA,DENETIM,LEGAL_HOLD", "Yönetici"))
+                           (1, "local\\admin", "Arşiv Yöneticisi", "ALL", "ADMIN,TALEP_YONETIM,IMHA_TALEP,IMHA_ONAY,DENETIM,LEGAL_HOLD,TANIM_YONETIM,RAPOR_GORUNTULE", "Yönetici"))
 
         if cursor.execute("SELECT COUNT(*) FROM aygaz_main_archive").fetchone()[0] == 0:
             cursor.executemany("""
@@ -462,81 +563,128 @@ def init_database() -> None:
                 (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year, classification, legal_hold)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, [
-                ("90101", "1411-23-201", "Bayi faaliyet raporları", "6", "1004", "01/08/2023", "31/08/2023", "23050", "H11.211", "AYGAZ", "Depoda", "BEKLİYOR", 2028, "INTERNAL", 0),
+                ("90101", "1411-23-201", "Bayi faaliyet raporları", "9", "1004", "01/08/2023", "31/08/2023", "23050", "H11.211", "AYGAZ", "Depoda", "BEKLİYOR", 2123, "INTERNAL", 0),
                 ("90102", "1411-23-202", "Ticari bayilik sözleşmeleri", "9", "1004", "01/08/2023", "31/08/2023", "23051", "H11.212", "AYGAZ", "Zimmette", "BEKLİYOR", 2123, "CONFIDENTIAL", 0),
                 ("90085", "1205-22-040", "İSG saha denetim raporları", "11", "1008", "10/05/2022", "15/05/2022", "22910", "H10.014", "AYGAZ", "Depoda", "BEKLİYOR", 2037, "INTERNAL", 0),
             ])
 
+        now_str = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (1, ?)", (now_str,))
         conn.commit()
     except Exception as e:
         conn.rollback()
-        logger.error(f"Veritabanı başlatma/migration hatası: {e}")
-        st.error(f"Sistem veri tabanı başlatılırken bir hata oluştu: {e}")
+        logger.error(f"Migration ve başlatma hatası: {e}")
+        st.error("Veritabanı şeması güncellenirken sistemsel bir hata oluştu. Yönetici ile iletişime geçiniz.")
     finally:
         conn.close()
 
-init_database()
+execute_migrations()
 
 # =========================================================
-# GÜÇLENDİRİLMİŞ AUDIT LOG (SHA-256 HASH ZİNCİRİ)
-# =========================================================
-def audit(user: str, action: str, details: str, object_id: str = "", result: str = "SUCCESS") -> None:
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        now_str = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
-        last_row = cursor.execute("SELECT event_hash FROM archive_audit ORDER BY id DESC LIMIT 1").fetchone()
-        prev_hash = last_row[0] if (last_row and last_row[0]) else "0" * 64
-        
-        raw_payload = f"{now_str}|{user}|{action}|{details}|{object_id}|{result}|{prev_hash}"
-        event_hash = hashlib.sha256(raw_payload.encode("utf-8")).hexdigest()
-        
-        cursor.execute("""
-            INSERT INTO archive_audit (timestamp, user, action_type, details, object_id, result, previous_hash, event_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (now_str, user, action, details, object_id, result, prev_hash, event_hash))
-        conn.commit()
-    except Exception as e:
-        logger.error(f"Audit log yazılamadı: {e}")
-    finally:
-        conn.close()
-
-# =========================================================
-# GÜVENLİ VERİ ERİŞİMİ VE YETKİLENDİRME (RBAC)
+# 3. GÜVENLİ READ_DF VE AUDIT LOG (SHA-256 HASH CHAIN)
 # =========================================================
 def read_df(query: str, params: tuple | list = ()) -> pd.DataFrame:
     conn = get_db()
     try:
         return pd.read_sql_query(query, conn, params=params)
     except Exception as e:
-        logger.error(f"Sorgu hatası [{query}]: {e}")
+        logger.error(f"SQL Calistirma Hatasi: {e} | Sorgu: {query} | Parametreler: {params}")
+        st.error("Veri okunurken bir hata oluştu.")
         return pd.DataFrame()
     finally:
         conn.close()
 
+def audit(user: str, action: str, details: str, object_id: str = "", result: str = "SUCCESS") -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("BEGIN IMMEDIATE")
+        now_str = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+        last_row = cursor.execute("SELECT event_hash FROM archive_audit ORDER BY id DESC LIMIT 1").fetchone()
+        prev_hash = last_row[0] if (last_row and last_row[0]) else "0" * 64
+        
+        raw_payload = f"{now_str}|{user}|{action}|{details}|{object_id}|{SESSION_ID}|{result}|{prev_hash}"
+        event_hash = hashlib.sha256(raw_payload.encode("utf-8")).hexdigest()
+        
+        cursor.execute("""
+            INSERT INTO archive_audit (timestamp, user, action_type, details, object_id, session_id, result, previous_hash, event_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (now_str, user, action, details, object_id, SESSION_ID, result, prev_hash, event_hash))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Audit loglama hatası: {e}")
+    finally:
+        conn.close()
+
+def verify_audit_hash_chain() -> tuple[bool, str]:
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, timestamp, user, action_type, details, object_id, session_id, result, previous_hash, event_hash 
+            FROM archive_audit ORDER BY id ASC
+        """)
+        rows = cursor.fetchall()
+        if not rows:
+            return True, "Denetim kaydı bulunmuyor."
+        
+        expected_prev = "0" * 64
+        for r in rows:
+            r_id, r_time, r_user, r_act, r_det, r_obj, r_sess, r_res, r_prev, r_event = r
+            if r_prev != expected_prev:
+                return False, f"Kayıt #{r_id}: Önceki hash değeri eşleşmiyor."
+            
+            raw_payload = f"{r_time}|{r_user}|{r_act}|{r_det or ''}|{r_obj or ''}|{r_sess or ''}|{r_res or 'SUCCESS'}|{r_prev}"
+            calc_hash = hashlib.sha256(raw_payload.encode("utf-8")).hexdigest()
+            if calc_hash != r_event:
+                return False, f"Kayıt #{r_id}: SHA-256 imzası hesaplanan değer ile uyuşmuyor."
+            
+            expected_prev = r_event
+        return True, f"Toplam {len(rows)} adet denetim kaydının hash zinciri doğrulandı."
+    except Exception as e:
+        logger.error(f"Hash zinciri doğrulama hatası: {e}")
+        return False, f"Doğrulama sırasında hata oluştu: {e}"
+    finally:
+        conn.close()
+
+# =========================================================
+# 4. RBAC VE KAPSAM YÖNETİMİ (BACKEND ENFORCEMENT)
+# =========================================================
 def normalize_auth_codes(auth_codes: Any) -> set[str]:
-    if not auth_codes:
+    if not auth_codes or pd.isna(auth_codes):
         return set()
     return {code.strip().upper() for code in str(auth_codes).split(",") if code.strip()}
 
 def is_admin_user(user_row: pd.Series) -> bool:
-    role = str(user_row["role_desc"] or "").strip().lower()
-    unit = str(user_row["unit_code"] or "").strip().upper()
-    auth_codes = normalize_auth_codes(user_row["auth_codes"])
-    return (unit == "ALL" or "admin" in role or "yönetici" in role or "ADMIN" in auth_codes or "*" in auth_codes)
+    role = str(user_row.get("role_desc", "") or "").strip().lower()
+    auth_codes = normalize_auth_codes(user_row.get("auth_codes", ""))
+    return ("admin" in role or "yönetici" in role or "ADMIN" in auth_codes or "*" in auth_codes)
 
 def has_permission(user_row: pd.Series, permission: str) -> bool:
     permission = permission.strip().upper()
-    auth_codes = normalize_auth_codes(user_row["auth_codes"])
+    auth_codes = normalize_auth_codes(user_row.get("auth_codes", ""))
     if is_admin_user(user_row):
         return True
     return permission in auth_codes
 
+def can_manage_definitions(user_row: pd.Series) -> bool:
+    return is_admin_user(user_row) or has_permission(user_row, "TANIM_YONETIM")
+
 def can_manage_requests(user_row: pd.Series) -> bool:
     return is_admin_user(user_row) or has_permission(user_row, "TALEP_YONETIM") or has_permission(user_row, "REQUEST_MANAGE")
 
+def can_create_destruction_request(user_row: pd.Series) -> bool:
+    return is_admin_user(user_row) or has_permission(user_row, "IMHA_TALEP") or has_permission(user_row, "IMHA") or has_permission(user_row, "DESTRUCTION")
+
+def can_approve_destruction(user_row: pd.Series) -> bool:
+    return is_admin_user(user_row) or has_permission(user_row, "IMHA_ONAY") or has_permission(user_row, "IMHA") or has_permission(user_row, "DESTRUCTION")
+
 def can_manage_destruction(user_row: pd.Series) -> bool:
-    return is_admin_user(user_row) or has_permission(user_row, "IMHA") or has_permission(user_row, "DESTRUCTION")
+    return can_create_destruction_request(user_row) or can_approve_destruction(user_row)
+
+def can_view_reports(user_row: pd.Series) -> bool:
+    return is_admin_user(user_row) or has_permission(user_row, "RAPOR_GORUNTULE") or has_permission(user_row, "REPORTS")
 
 def can_view_audit(user_row: pd.Series) -> bool:
     return is_admin_user(user_row) or has_permission(user_row, "DENETIM") or has_permission(user_row, "AUDIT")
@@ -544,28 +692,94 @@ def can_view_audit(user_row: pd.Series) -> bool:
 def can_manage_legal_hold(user_row: pd.Series) -> bool:
     return is_admin_user(user_row) or has_permission(user_row, "LEGAL_HOLD")
 
+def assert_unit_access(active_row: pd.Series, target_unit: str) -> bool:
+    user_unit = str(active_row.get("unit_code", "")).strip().upper()
+    if user_unit == "ALL":
+        return True
+    return user_unit == str(target_unit).strip().upper()
+
 # =========================================================
-# EXCEL / CSV İŞLEMLERİ (AİBS UYUMLU)
+# 5. TANIM DOĞRULAMA VE SAKLAMA SÜRESİ HESAPLAMA
 # =========================================================
+def get_active_definitions() -> tuple[dict[str, str], dict[str, str], dict[str, tuple[str, int, str]]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT code, name FROM institutions WHERE active = 1")
+        inst_dict = {str(r[0]).strip(): str(r[1]).strip() for r in cursor.fetchall()}
+
+        cursor.execute("SELECT code, name FROM units WHERE active = 1")
+        unit_dict = {str(r[0]).strip(): str(r[1]).strip() for r in cursor.fetchall()}
+
+        cursor.execute("SELECT series_code, name, retention_year, unit_code FROM series WHERE active = 1")
+        series_dict = {str(r[0]).strip(): (str(r[1]).strip(), int(r[2]) if r[2] is not None else 10, str(r[3]).strip()) for r in cursor.fetchall()}
+
+        return inst_dict, unit_dict, series_dict
+    finally:
+        conn.close()
+
+def calculate_retention_end_year(series_code: str, base_year: int) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT retention_year, legal_basis FROM series WHERE series_code = ? AND active = 1", (series_code,))
+        row = cursor.fetchone()
+        if not row:
+            return base_year + 10
+        ret_year = row[0]
+        legal_basis = str(row[1] or "").lower()
+        if ret_year >= 99 or "süresiz" in legal_basis:
+            return 9999
+        return base_year + int(ret_year)
+    except Exception:
+        return base_year + 10
+    finally:
+        conn.close()
+
+# =========================================================
+# 6. IMPORT NORMALIZER & EXCEL YÖNETİMİ
+# =========================================================
+def normalize_import_val(val: Any, default: str = "") -> str:
+    if val is None or pd.isna(val):
+        return default
+    s = str(val).strip()
+    if s.lower() in ("nan", "none", "nat", "null"):
+        return default
+    return s
+
+def normalize_int_val(val: Any, default: int) -> int:
+    if val is None or pd.isna(val):
+        return default
+    try:
+        s = str(val).strip().split(".")[0]
+        return int(s)
+    except Exception:
+        return default
+
 def convert_df_to_excel(sheets_dict: dict[str, pd.DataFrame]) -> bytes:
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         for sheet_name, df in sheets_dict.items():
-            df.to_excel(writer, index=False, sheet_name=str(sheet_name)[:31])
+            clean_sheet = str(sheet_name)[:31]
+            df.to_excel(writer, index=False, sheet_name=clean_sheet)
     return output.getvalue()
 
 def download_excel(label: str, dataframe: pd.DataFrame, filename: str, sheet_name: str = "Arşiv Kataloğu", extra_sheets: dict | None = None, user: str = "local\\admin") -> None:
-    sheets = {sheet_name: dataframe}
-    if extra_sheets:
-        sheets.update(extra_sheets)
-    excel_data = convert_df_to_excel(sheets)
-    audit(user, "Excel Dışa Aktarma", f"{filename} ({len(dataframe)} kayıt)", sheet_name)
-    st.download_button(
-        label=label,
-        data=excel_data,
-        file_name=filename,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    try:
+        sheets = {sheet_name: dataframe}
+        if extra_sheets:
+            sheets.update(extra_sheets)
+        excel_data = convert_df_to_excel(sheets)
+        audit(user, "Excel Dışa Aktarma", f"{filename} ({len(dataframe)} kayıt)", object_id=filename)
+        st.download_button(
+            label=label,
+            data=excel_data,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except Exception as e:
+        logger.error(f"Excel dışa aktarma hatası: {e}")
+        st.error("Excel dosyası hazırlanırken bir hata oluştu.")
 
 def logo_data_uri() -> str:
     logo_path = BASE_DIR / "Aygaz.png"
@@ -582,7 +796,7 @@ def wordmark_data_uri() -> str:
     return ""
 
 # =========================================================
-# AKTİF KULLANICI VE YETKİ KAPSAMI YÖNETİMİ
+# 7. AKTİF KULLANICI VE KAPSAM BELİRLEME (DEMO AUTH)
 # =========================================================
 users_df = read_df("SELECT id, username, full_name, unit_code, auth_codes, role_desc, active FROM user_permissions WHERE active = 1 ORDER BY id")
 if users_df.empty:
@@ -607,17 +821,25 @@ with st.sidebar:
 
     selected_user_label = st.selectbox("Kullanıcı", user_labels, index=default_index, label_visibility="visible")
     active_row = users_df.iloc[user_labels.index(selected_user_label)]
-    active_name = active_row["full_name"]
-    active_unit = active_row["unit_code"]
-    active_user = active_row["username"]
+    active_name = str(active_row["full_name"])
+    active_unit = str(active_row["unit_code"]).strip()
+    active_user = str(active_row["username"]).strip()
     is_admin = is_admin_user(active_row)
+
+    if st.session_state.get("last_logged_user") != active_user:
+        st.session_state["last_logged_user"] = active_user
+        audit(active_user, "Kullanıcı Oturumu Değiştirildi", f"{active_name} ({active_unit}) seçildi.", object_id=active_user)
 
     st.caption(f"{active_row['role_desc']} · {active_unit}")
     st.markdown("---")
 
     menu_options = ["Katalog", "Erişim Talepleri"]
-    if is_admin:
-        menu_options.extend(["Tanımlar", "Saklama ve imha", "Günlükler"])
+    if can_manage_definitions(active_row):
+        menu_options.append("Tanımlar")
+    if can_manage_destruction(active_row):
+        menu_options.append("Saklama ve imha")
+    if can_view_reports(active_row):
+        menu_options.append("Günlükler")
     if can_view_audit(active_row):
         menu_options.append("Denetim izi")
 
@@ -628,7 +850,7 @@ with st.sidebar:
     st.caption(suanki_zaman().strftime("Son senkronizasyon  %d.%m.%Y · %H:%M"))
 
 # =========================================================
-# ÜST BİLGİ PANELİ (TOPBAR)
+# 8. ÜST BİLGİ PANELİ (TOPBAR)
 # =========================================================
 user_initial = active_name[:1].upper() if active_name else "K"
 scope_label = "Tüm birimler" if active_unit == "ALL" else f"Birim kapsamı: {active_unit}"
@@ -646,7 +868,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Kapsam Metrikleri
 scope_sql = " AND unit_code = ?" if active_unit != "ALL" else ""
 scope_params = (active_unit,) if active_unit != "ALL" else ()
 scoped_count_df = read_df("SELECT COUNT(*) AS value FROM aygaz_main_archive WHERE 1=1" + scope_sql, scope_params)
@@ -665,7 +886,7 @@ def header(title: str, description: str) -> None:
     st.markdown(f'<div class="page-head"><div><div class="eyebrow">AYGAZ ARŞİV SİSTEMİ / {menu.upper()}</div><h1>{title}</h1><p>{description}</p></div><div class="stamp">{formatli_tarih()}</div></div>', unsafe_allow_html=True)
 
 # =========================================================
-# MENÜ: KATALOG
+# 9. MENÜ: KATALOG
 # =========================================================
 if menu == "Katalog":
     header("Arşiv kataloğu", "Belgeyi adıyla değil, fiziksel hayat döngüsüyle bulun.")
@@ -687,15 +908,17 @@ if menu == "Katalog":
         with f1: status = st.selectbox("Durum", ["Tümü", "Depoda", "Zimmette", "İmha Listesinde"])
         with f2: unit = st.text_input("Birim kodu", placeholder="Örn. 1004")
         with f3: limit = st.selectbox("Görünüm", [25, 50, 100])
+        
         query = """
             SELECT doc_reg_no AS [Kayıt No], doc_no AS [Dosya No], doc_name AS [Belge], 
                    series_code AS [Seri], unit_code AS [Birim], first_doc_date AS [İlk Evrak Tarihi], 
                    last_doc_date AS [Son Evrak Tarihi], box_no AS [Kutu No], shelf_no AS [Yer No], 
                    institution AS [Kurum], status AS [Durum], destruction_status AS [İmha Durumu], 
-                   retention_end_year AS [Saklama Sonu], legal_hold AS [Hukuki Engel] 
+                   CASE WHEN retention_end_year >= 9000 THEN 'Süresiz' ELSE CAST(retention_end_year AS TEXT) END AS [Saklama Sonu], 
+                   legal_hold AS [Hukuki Engel] 
             FROM aygaz_main_archive WHERE 1=1
         """
-        params = []
+        params: list[Any] = []
         if active_unit != "ALL": 
             query += " AND unit_code = ?"
             params.append(active_unit)
@@ -703,6 +926,7 @@ if menu == "Katalog":
         if search.strip(): 
             query += " AND (doc_reg_no LIKE ? OR doc_no LIKE ? OR doc_name LIKE ? OR box_no LIKE ? OR shelf_no LIKE ?)"
             params.extend([f"%{search.strip()}%"] * 5)
+            
         if status == "İmha Listesinde":
             query += " AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') AND CAST(retention_end_year AS INTEGER) <= ?"
             params.append(CURRENT_YEAR)
@@ -713,12 +937,15 @@ if menu == "Katalog":
         if unit.strip() and active_unit == "ALL": 
             query += " AND unit_code LIKE ?"
             params.append(f"%{unit.strip()}%")
+            
         catalog_df = read_df(query + " ORDER BY id DESC LIMIT ?", params + [limit])
         st.dataframe(catalog_df, width="stretch", hide_index=True, height=390)
         st.caption(f"{len(catalog_df)} kayıt gösteriliyor · Filtreler doğrudan arşiv kataloğuna uygulanıyor")
         download_excel("Katalog Excel indir", catalog_df, "aygaz-arsiv-katalog.xlsx", user=active_user)
         
-        if is_admin:
+        inst_dict, unit_dict, series_dict = get_active_definitions()
+
+        if is_admin or can_manage_definitions(active_row):
             with st.expander("Yeni arşiv kaydı"):
                 with st.form("new_archive_record"):
                     a1, a2, a3 = st.columns(3)
@@ -727,35 +954,51 @@ if menu == "Katalog":
                         new_doc_no = st.text_input("Dosya no")
                         new_doc_name = st.text_input("Belge adı")
                     with a2:
-                        new_series = st.text_input("Seri kodu")
-                        new_unit = st.text_input("Birim kodu", value=active_unit if active_unit != "ALL" else "1004")
+                        available_series = list(series_dict.keys())
+                        new_series = st.selectbox("Seri Kodu", options=available_series, format_func=lambda x: f"{x} - {series_dict[x][0]}")
+                        
+                        available_units = [u for u in unit_dict.keys() if assert_unit_access(active_row, u)]
+                        if not available_units:
+                            available_units = [active_unit]
+                        new_unit = st.selectbox("Birim Kodu", options=available_units, format_func=lambda x: f"{x} - {unit_dict.get(x, x)}")
                         new_box = st.text_input("Kutu no")
                     with a3:
                         new_shelf = st.text_input("Raf / yer no")
                         new_first_date = st.text_input("İlk evrak tarihi", placeholder="GG/AA/YYYY")
                         new_last_date = st.text_input("Son evrak tarihi", placeholder="GG/AA/YYYY")
-                    if st.form_submit_button("Arşiv kaydını oluştur", type="primary") and new_reg.strip() and new_doc_name.strip() and new_unit.strip():
-                        if active_unit != "ALL" and new_unit.strip() != active_unit:
-                            st.error(f"Yetki sınırınız gereği yalnızca {active_unit} birimine kayıt girebilirsiniz.")
+                    
+                    if st.form_submit_button("Arşiv kaydını oluştur", type="primary"):
+                        if not (new_reg.strip() and new_doc_name.strip() and new_unit.strip() and new_series.strip()):
+                            st.error("Kayıt No, Belge Adı, Birim ve Seri alanları zorunludur.")
+                        elif not assert_unit_access(active_row, new_unit.strip()):
+                            st.error(f"Yetki sınırınız gereği yalnızca {active_unit} birimine kayıt ekleyebilirsiniz.")
+                        elif new_unit.strip() not in unit_dict:
+                            st.error(f"Seçilen birim kodu ({new_unit}) veritabanında aktif tanımlar arasında bulunamadı.")
+                        elif new_series.strip() not in series_dict:
+                            st.error(f"Seçilen seri kodu ({new_series}) veritabanında aktif tanımlar arasında bulunamadı.")
                         else:
                             conn = get_db()
                             now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                            
+                            # Yasal saklama süresi hesaplama
+                            calculated_end_year = calculate_retention_end_year(new_series.strip(), CURRENT_YEAR)
+                            
                             try:
                                 conn.execute("""
                                     INSERT INTO aygaz_main_archive 
                                     (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year, created_by, created_at) 
                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                """, (new_reg.strip(), new_doc_no.strip(), new_doc_name.strip(), new_series.strip(), new_unit.strip(), new_first_date.strip(), new_last_date.strip(), new_box.strip(), new_shelf.strip(), "AYGAZ", "Depoda", "BEKLİYOR", CURRENT_YEAR + 10, active_user, now_stamp))
+                                """, (new_reg.strip(), new_doc_no.strip(), new_doc_name.strip(), new_series.strip(), new_unit.strip(), new_first_date.strip(), new_last_date.strip(), new_box.strip(), new_shelf.strip(), "AYGAZ A.Ş.", "Depoda", "BEKLİYOR", calculated_end_year, active_user, now_stamp))
                                 conn.commit()
-                                audit(active_user, "Arşiv kaydı oluşturma", f"{new_reg} · {new_doc_name}", object_id=new_reg.strip())
-                                st.success("Arşiv kaydı oluşturuldu.")
+                                audit(active_user, "Arşiv kaydı oluşturma", f"{new_reg} · {new_doc_name} (Saklama Bitiş: {calculated_end_year})", object_id=new_reg.strip())
+                                st.success(f"Arşiv kaydı oluşturuldu. Saklama Bitiş Yılı: {calculated_end_year if calculated_end_year < 9000 else 'Süresiz'}")
                                 st.rerun()
                             except sqlite3.IntegrityError:
                                 st.error("Bu kayıt numarası sistemde zaten mevcut.")
                             finally:
                                 conn.close()
 
-            with st.expander("📥 Toplu Arşiv Kaydı Yükle (Excel/CSV)"):
+            with st.expander("Toplu Arşiv Kaydı Yükle (Excel/CSV)"):
                 uploaded_file = st.file_uploader("Eski sistemden dışa aktarılan Excel/CSV dosyasını seçin", type=["xlsx", "xls", "csv"])
                 if uploaded_file:
                     try:
@@ -764,47 +1007,93 @@ if menu == "Katalog":
                         if st.button("Veritabanına Aktarımı Başlat", type="primary"):
                             conn = get_db()
                             cursor = conn.cursor()
-                            success_count = 0
+                            inserted_count = 0
+                            updated_count = 0
+                            rejected_rows: list[str] = []
                             now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                            
                             try:
-                                for _, row in import_df.iterrows():
-                                    row_unit = str(row.get("Birim", "1004")).strip()
-                                    if active_unit != "ALL" and row_unit != active_unit:
+                                cursor.execute("BEGIN TRANSACTION")
+                                for idx, row in import_df.iterrows():
+                                    row_num = idx + 2
+                                    row_reg = normalize_import_val(row.get("Kayıt No"))
+                                    doc_name_val = normalize_import_val(row.get("Belge", row.get("Belge Adı")))
+                                    row_unit = normalize_import_val(row.get("Birim"))
+                                    series_val = normalize_import_val(row.get("Seri"))
+
+                                    # Doğrulamalar
+                                    if not row_reg:
+                                        rejected_rows.append(f"Satır {row_num}: Kayıt No boş olamaz.")
                                         continue
-                                    cursor.execute("""
-                                        INSERT OR REPLACE INTO aygaz_main_archive 
-                                        (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year, created_by, created_at)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                    """, (
-                                        str(row.get("Kayıt No", uuid.uuid4().hex[:8])),
-                                        str(row.get("Dosya No", "")),
-                                        str(row.get("Belge", row.get("Belge Adı", "İsimsiz Evrak"))),
-                                        str(row.get("Seri", "1")),
-                                        row_unit,
-                                        str(row.get("İlk Evrak Tarihi", "")),
-                                        str(row.get("Son Evrak Tarihi", "")),
-                                        str(row.get("Kutu No", "")),
-                                        str(row.get("Yer No", "")),
-                                        str(row.get("Kurum", "AYGAZ A.Ş.")),
-                                        str(row.get("Durum", "Depoda")),
-                                        "BEKLİYOR",
-                                        int(row.get("Saklama Sonu", CURRENT_YEAR + 10)),
-                                        active_user,
-                                        now_stamp
-                                    ))
-                                    success_count += 1
+                                    if not doc_name_val:
+                                        rejected_rows.append(f"Satır {row_num} (Kayıt {row_reg}): Belge adı boş bırakılamaz.")
+                                        continue
+                                    if not row_unit or row_unit not in unit_dict:
+                                        rejected_rows.append(f"Satır {row_num} (Kayıt {row_reg}): Birim kodu ({row_unit}) sistemde tanımlı ve aktif değil.")
+                                        continue
+                                    if not assert_unit_access(active_row, row_unit):
+                                        rejected_rows.append(f"Satır {row_num} (Kayıt {row_reg}): Birim yetki kapsamınızın ({active_unit}) dışındadır.")
+                                        continue
+                                    if not series_val or series_val not in series_dict:
+                                        rejected_rows.append(f"Satır {row_num} (Kayıt {row_reg}): Seri kodu ({series_val}) sistemde tanımlı ve aktif değil.")
+                                        continue
+
+                                    doc_no_val = normalize_import_val(row.get("Dosya No"))
+                                    first_d_val = normalize_import_val(row.get("İlk Evrak Tarihi"))
+                                    last_d_val = normalize_import_val(row.get("Son Evrak Tarihi"))
+                                    box_val = normalize_import_val(row.get("Kutu No"))
+                                    shelf_val = normalize_import_val(row.get("Yer No"))
+                                    inst_val = normalize_import_val(row.get("Kurum"), default="AYGAZ A.Ş.")
+                                    status_val = normalize_import_val(row.get("Durum"), default="Depoda")
+                                    
+                                    # Saklama süresi kontrolü
+                                    provided_ret = row.get("Saklama Sonu")
+                                    if provided_ret is not None and not pd.isna(provided_ret) and str(provided_ret).strip().lower() not in ("süresiz", "nan", "none", ""):
+                                        ret_end_val = normalize_int_val(provided_ret, default=calculate_retention_end_year(series_val, CURRENT_YEAR))
+                                    else:
+                                        ret_end_val = calculate_retention_end_year(series_val, CURRENT_YEAR)
+
+                                    cursor.execute("SELECT id, unit_code FROM aygaz_main_archive WHERE doc_reg_no = ?", (row_reg,))
+                                    existing = cursor.fetchone()
+                                    if existing:
+                                        existing_unit = existing[1]
+                                        if not assert_unit_access(active_row, existing_unit):
+                                            rejected_rows.append(f"Satır {row_num} (Kayıt {row_reg}): Mevcut kayıt yetki kapsamınız dışındadır.")
+                                            continue
+                                        cursor.execute("""
+                                            UPDATE aygaz_main_archive SET
+                                                doc_no = ?, doc_name = ?, series_code = ?, unit_code = ?,
+                                                first_doc_date = ?, last_doc_date = ?, box_no = ?, shelf_no = ?,
+                                                institution = ?, status = ?, retention_end_year = ?,
+                                                updated_by = ?, updated_at = ?
+                                            WHERE doc_reg_no = ?
+                                        """, (doc_no_val, doc_name_val, series_val, row_unit, first_d_val, last_d_val, box_val, shelf_val, inst_val, status_val, ret_end_val, active_user, now_stamp, row_reg))
+                                        updated_count += 1
+                                    else:
+                                        cursor.execute("""
+                                            INSERT INTO aygaz_main_archive 
+                                            (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year, created_by, created_at)
+                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        """, (row_reg, doc_no_val, doc_name_val, series_val, row_unit, first_d_val, last_d_val, box_val, shelf_val, inst_val, status_val, "BEKLİYOR", ret_end_val, active_user, now_stamp))
+                                        inserted_count += 1
+
                                 conn.commit()
-                                audit(active_user, "Toplu Veri İçe Aktarma", f"{success_count} adet kayıt aktarıldı")
-                                st.success(f"{success_count} adet arşiv kaydı başarıyla aktarıldı!")
+                                audit(active_user, "Toplu Veri İçe Aktarma", f"Eklendi: {inserted_count}, Güncellendi: {updated_count}, Reddedildi: {len(rejected_rows)}")
+                                st.success(f"Aktarım tamamlandı. Eklenen: {inserted_count}, Güncellenen: {updated_count}, Hatalı/Reddedilen: {len(rejected_rows)}")
+                                if rejected_rows:
+                                    st.warning("Aşağıdaki satırlar doğrulama kurallarına uymadığı için içeri alınmadı:\n" + "\n".join(rejected_rows[:10]))
+                                    if len(rejected_rows) > 10:
+                                        st.caption(f"... ve {len(rejected_rows) - 10} adet daha kayıt reddedildi.")
                                 st.rerun()
                             except Exception as import_err:
                                 conn.rollback()
-                                logger.error(f"İçe aktarma hatası: {import_err}")
-                                st.error(f"İçe aktarım sırasında hata oluştu ve işlem geri alındı: {import_err}")
+                                logger.error(f"Toplu aktarım hatası: {import_err}")
+                                st.error("İçe aktarım sırasında bir hata oluştu ve veri bütünlüğünü korumak adına tüm işlem geri alındı.")
                             finally:
                                 conn.close()
                     except Exception as e:
-                        st.error(f"Dosya okuma hatası: {e}")
+                        logger.error(f"Dosya okuma hatası: {e}")
+                        st.error("Dosya biçimi okunamadı. Lütfen geçerli bir Excel veya CSV dosyası yükleyiniz.")
 
     with right:
         st.markdown('<div class="panel"><div class="panel-head"><div class="panel-title">Kayıt Detayı</div></div>', unsafe_allow_html=True)
@@ -812,26 +1101,79 @@ if menu == "Katalog":
             selected_reg = st.selectbox("İncelenecek kayıt", catalog_df["Kayıt No"].tolist(), label_visibility="collapsed")
             selected = catalog_df[catalog_df["Kayıt No"] == selected_reg].iloc[0]
             
-            hold_txt = "AKTİF KİLİT" if selected.get("Hukuki Engel", 0) == 1 else "KİLİT YOK"
-            hold_color = "#d47d36" if selected.get("Hukuki Engel", 0) == 1 else "#148b80"
+            if st.session_state.get("last_viewed_doc") != selected_reg:
+                st.session_state["last_viewed_doc"] = selected_reg
+                audit(active_user, "Kayıt Görüntüleme", f"Kayıt No: {selected['Kayıt No']} incelendi", object_id=str(selected["Kayıt No"]))
+
+            hold_val = int(selected.get("Hukuki Engel", 0))
+            hold_txt = "AKTİF KİLİT" if hold_val == 1 else "KİLİT YOK"
+            hold_color = "#d47d36" if hold_val == 1 else "#148b80"
             
-            st.markdown(f'<div class="eyebrow">KAYIT / {selected["Kayıt No"]}</div><h3>{selected["Belge"]}</h3><p><b>Fiziksel konum</b><br><span class="mono">KUTU {selected["Kutu No"]} · RAF {selected["Yer No"]}</span></p><p><b>Birim</b> {selected["Birim"]}<br><b>Seri</b> {selected["Seri"]}<br><b>Hukuki Durum:</b> <span style="color:{hold_color};font-weight:700">{hold_txt}</span></p><div style="color:#1472bc;font-weight:700">● {selected["Durum"]}</div>', unsafe_allow_html=True)
-            audit(active_user, "Kayıt Görüntüleme", f"Kayıt No: {selected['Kayıt No']} incelendi", object_id=str(selected["Kayıt No"]))
+            st.markdown(f'<div class="eyebrow">KAYIT / {selected["Kayıt No"]}</div><h3>{selected["Belge"]}</h3><p><b>Fiziksel konum</b><br><span class="mono">KUTU {selected["Kutu No"]} · RAF {selected["Yer No"]}</span></p><p><b>Birim</b> {selected["Birim"]}<br><b>Seri</b> {selected["Seri"]}<br><b>Saklama Sonu:</b> {selected["Saklama Sonu"]}<br><b>Hukuki Durum:</b> <span style="color:{hold_color};font-weight:700">{hold_txt}</span></p><div style="color:#1472bc;font-weight:700">● {selected["Durum"]}</div>', unsafe_allow_html=True)
 
             if can_manage_legal_hold(active_row):
-                is_currently_held = int(selected.get("Hukuki Engel", 0)) == 1
-                hold_btn_label = "Hukuki Kilidi Kaldır" if is_currently_held else "Hukuki Kilit Koy (Hold)"
-                if st.button(hold_btn_label, width="stretch"):
-                    conn = get_db()
-                    new_hold_state = 0 if is_currently_held else 1
-                    conn.execute("UPDATE aygaz_main_archive SET legal_hold = ? WHERE doc_reg_no = ?", (new_hold_state, selected['Kayıt No']))
-                    conn.commit()
-                    conn.close()
-                    audit(active_user, "Hukuki Kilit Değişimi", f"Kayıt {selected['Kayıt No']} kilit durumu: {new_hold_state}", object_id=str(selected['Kayıt No']))
-                    st.rerun()
+                if hold_val == 1:
+                    with st.form(f"rel_hold_{selected_reg}"):
+                        rel_reason = st.text_input("Kaldırma Gerekçesi")
+                        if st.form_submit_button("Hukuki Kilidi Kaldır", type="primary"):
+                            if not rel_reason.strip():
+                                st.error("Hukuki kilidi kaldırmak için geçerli bir gerekçe girmelisiniz.")
+                            elif not assert_unit_access(active_row, selected["Birim"]):
+                                st.error("Bu kaydın birimi için hukuki kilit kaldırma yetkiniz bulunmamaktadır.")
+                            else:
+                                conn = get_db()
+                                cursor = conn.cursor()
+                                scope_where = " AND unit_code = ?" if active_unit != "ALL" else ""
+                                scope_p = [f"Kaldırıldı: {rel_reason.strip()}", active_user, suanki_zaman().strftime("%Y-%m-%d %H:%M:%S"), selected['Kayıt No']]
+                                if active_unit != "ALL":
+                                    scope_p.append(active_unit)
+                                cursor.execute(f"""
+                                    UPDATE aygaz_main_archive SET 
+                                        legal_hold = 0, legal_hold_reason = ?, legal_hold_by = ?, legal_hold_at = ?
+                                    WHERE doc_reg_no = ? {scope_where}
+                                """, tuple(scope_p))
+                                if cursor.rowcount == 1:
+                                    conn.commit()
+                                    audit(active_user, "Hukuki Kilit Kaldırma", f"Kayıt {selected['Kayıt No']} kilidi kaldırıldı. Gerekçe: {rel_reason.strip()}", object_id=str(selected['Kayıt No']))
+                                    st.success("Hukuki kilit kaldırıldı.")
+                                    st.rerun()
+                                else:
+                                    conn.rollback()
+                                    st.error("Kilit kaldırma işlemi yetki veya kayıt durumu nedeniyle başarısız oldu.")
+                                conn.close()
+                else:
+                    with st.form(f"set_hold_{selected_reg}"):
+                        set_reason = st.text_input("Bloke Gerekçesi (Dava, Teftiş vb.)")
+                        if st.form_submit_button("Hukuki Kilit Koy (Hold)", type="primary"):
+                            if not set_reason.strip():
+                                st.error("Hukuki kilit koyabilmek için zorunlu gerekçe girmelisiniz.")
+                            elif not assert_unit_access(active_row, selected["Birim"]):
+                                st.error("Bu kaydın birimi için hukuki kilit koyma yetkiniz bulunmamaktadır.")
+                            else:
+                                conn = get_db()
+                                cursor = conn.cursor()
+                                scope_where = " AND unit_code = ?" if active_unit != "ALL" else ""
+                                scope_p = [set_reason.strip(), active_user, suanki_zaman().strftime("%Y-%m-%d %H:%M:%S"), selected['Kayıt No']]
+                                if active_unit != "ALL":
+                                    scope_p.append(active_unit)
+                                cursor.execute(f"""
+                                    UPDATE aygaz_main_archive SET 
+                                        legal_hold = 1, legal_hold_reason = ?, legal_hold_by = ?, legal_hold_at = ?
+                                    WHERE doc_reg_no = ? {scope_where}
+                                """, tuple(scope_p))
+                                if cursor.rowcount == 1:
+                                    conn.commit()
+                                    audit(active_user, "Hukuki Kilit Koyma", f"Kayıt {selected['Kayıt No']} kilitlendi. Gerekçe: {set_reason.strip()}", object_id=str(selected['Kayıt No']))
+                                    st.success("Hukuki kilit konuldu.")
+                                    st.rerun()
+                                else:
+                                    conn.rollback()
+                                    st.error("Kilit koyma işlemi yetki veya kayıt durumu nedeniyle gerçekleştirilemedi.")
+                                conn.close()
 
             if st.button("Bu kayıt için talep aç", type="primary", width="stretch"): 
-                st.session_state["request_doc"] = f"#{selected['Kayıt No']} · {selected['Belge']}"
+                st.session_state["request_doc_reg"] = str(selected['Kayıt No']).strip()
+                st.session_state["request_doc_name"] = str(selected['Belge']).strip()
                 st.session_state["request_open"] = True
                 st.rerun()
         else: 
@@ -843,37 +1185,49 @@ if menu == "Katalog":
         with st.form("catalog_request"):
             c1, c2 = st.columns(2)
             with c1: 
-                request_doc = st.text_input("Kayıt", value=st.session_state.get("request_doc", ""), disabled=True)
+                req_reg = st.session_state.get("request_doc_reg", "")
+                req_title = st.session_state.get("request_doc_name", "")
+                st.text_input("Kayıt No", value=req_reg, disabled=True)
+                st.text_input("Belge Adı", value=req_title, disabled=True)
                 request_type = st.selectbox("Erişim biçimi", ["Fiziksel zimmet", "Dijital tarama (PDF)"])
             with c2: 
                 request_urgency = st.selectbox("Öncelik", ["Normal", "Acil", "Kritik"])
                 request_note = st.text_area("Gerekçe", placeholder="İnceleme amacı veya teslim notu...")
             if st.form_submit_button("Talebi kuyruğa al", type="primary"):
-                request_no = f"TR-{uuid.uuid4().hex[:8].upper()}"
                 conn = get_db()
-                now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
-                conn.execute("""
-                    INSERT INTO archive_requests (req_no, requester, unit_code, doc_item, delivery_type, urgency, status, notes, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (request_no, active_name, active_unit, request_doc, request_type, request_urgency, "Onay Bekliyor", request_note, now_stamp))
-                conn.commit()
+                cursor = conn.cursor()
+                cursor.execute("SELECT unit_code, doc_name FROM aygaz_main_archive WHERE doc_reg_no = ?", (req_reg,))
+                doc_record = cursor.fetchone()
+                if not doc_record:
+                    st.error("Talep açılmak istenen arşiv kaydı veritabanında bulunamadı.")
+                elif not assert_unit_access(active_row, doc_record[0]):
+                    st.error(f"Bu kayıt {doc_record[0]} birimine aittir. Kapsamınız dışındaki kayda talep açamazsınız.")
+                else:
+                    request_no = f"TR-{uuid.uuid4().hex[:8].upper()}"
+                    now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                    doc_item_label = f"#{req_reg} · {doc_record[1]}"
+                    cursor.execute("""
+                        INSERT INTO archive_requests (req_no, requester, requester_username, unit_code, doc_reg_no, doc_item, delivery_type, urgency, status, notes, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (request_no, active_name, active_user, doc_record[0], req_reg, doc_item_label, request_type, request_urgency, "Onay Bekliyor", request_note, now_stamp))
+                    conn.commit()
+                    audit(active_user, "Erişim Talebi Oluşturma", f"{request_no} · {doc_item_label}", object_id=request_no)
+                    st.session_state["request_open"] = False
+                    st.success(f"{request_no} numaralı talep kuyruğa alındı.")
+                    st.rerun()
                 conn.close()
-                audit(active_user, "Erişim Talebi Oluşturma", f"{request_no} · {request_doc}", object_id=request_no)
-                st.session_state["request_open"] = False
-                st.success(f"{request_no} numaralı talep kuyruğa alındı.")
-                st.rerun()
 
 # =========================================================
-# MENÜ: TANIMLAR (ADMIN)
+# 10. MENÜ: TANIMLAR
 # =========================================================
-elif menu == "Tanımlar" and is_admin:
+elif menu == "Tanımlar" and can_manage_definitions(active_row):
     header("Tanımlar", "Mevcut Aygaz arşiv sınıflandırmasını bozmadan kurum, birim ve seri kayıtlarını incele.")
     definition_tabs = st.tabs(["Birimler", "Seriler", "Kurumlar", "Kullanıcılar"])
     
     with definition_tabs[0]:
         unit_search = st.text_input("Birimlerde ara", placeholder="Birim adı veya kodu...")
-        unit_query = "SELECT id AS [ID], name AS [Birim Adı], code AS [Birim Kodu], inst_code AS [Kurum Kodu], inst_name AS [Kurum Adı] FROM units WHERE 1=1"
-        unit_params = []
+        unit_query = "SELECT id AS [ID], name AS [Birim Adı], code AS [Birim Kodu], inst_code AS [Kurum Kodu], inst_name AS [Kurum Adı] FROM units WHERE active = 1"
+        unit_params: list[Any] = []
         if unit_search.strip():
             unit_query += " AND (name LIKE ? OR code LIKE ?)"
             unit_params.extend([f"%{unit_search.strip()}%"] * 2)
@@ -886,9 +1240,9 @@ elif menu == "Tanımlar" and is_admin:
                 if st.form_submit_button("Birimi kaydet", type="primary") and new_unit_name.strip() and new_unit_code.strip():
                     conn = get_db()
                     try:
-                        conn.execute("INSERT INTO units (name, code, inst_code, inst_name) VALUES (?, ?, ?, ?)", (new_unit_name.strip(), new_unit_code.strip(), new_unit_inst.strip(), "AYGAZ A.Ş."))
+                        conn.execute("INSERT INTO units (name, code, inst_code, inst_name, active) VALUES (?, ?, ?, ?, 1)", (new_unit_name.strip(), new_unit_code.strip(), new_unit_inst.strip(), "AYGAZ A.Ş."))
                         conn.commit()
-                        audit(active_user, "Birim Tanımı", f"{new_unit_code} · {new_unit_name}", object_id=new_unit_code.strip())
+                        audit(active_user, "Birim Tanımı Ekleme", f"{new_unit_code} · {new_unit_name}", object_id=new_unit_code.strip())
                         st.success("Birim kaydedildi.")
                         st.rerun()
                     except sqlite3.IntegrityError:
@@ -898,8 +1252,8 @@ elif menu == "Tanımlar" and is_admin:
 
     with definition_tabs[1]:
         series_search = st.text_input("Serilerde ara", placeholder="Seri adı, kodu veya mevzuat...")
-        series_query = "SELECT id AS [ID], name AS [Seri Adı], unit_code AS [Birim Kodu], unit_name AS [Birim], series_code AS [Seri Kodu], retention_year AS [Saklama (Yıl)], legal_basis AS [Mevzuat Dayanağı], trigger_event AS [Süreç Tetikleyicisi] FROM series WHERE 1=1"
-        series_params = []
+        series_query = "SELECT id AS [ID], name AS [Seri Adı], unit_code AS [Birim Kodu], unit_name AS [Birim], series_code AS [Seri Kodu], CASE WHEN retention_year >= 99 THEN 'Süresiz' ELSE CAST(retention_year AS TEXT) END AS [Saklama (Yıl)], legal_basis AS [Mevzuat Dayanağı], trigger_event AS [Süreç Tetikleyicisi] FROM series WHERE active = 1"
+        series_params: list[Any] = []
         if series_search.strip():
             series_query += " AND (name LIKE ? OR series_code LIKE ? OR legal_basis LIKE ?)"
             series_params.extend([f"%{series_search.strip()}%"] * 3)
@@ -909,15 +1263,17 @@ elif menu == "Tanımlar" and is_admin:
                 new_series_name = st.text_input("Seri adı")
                 new_series_code = st.text_input("Seri kodu")
                 new_series_unit = st.text_input("Birim kodu")
-                new_series_retention = st.number_input("Süre (yıl)", min_value=0, value=10)
+                new_series_is_permanent = st.checkbox("Süresiz Saklama")
+                new_series_retention = st.number_input("Süre (yıl)", min_value=0, value=10, disabled=new_series_is_permanent)
                 new_series_basis = st.text_input("Mevzuat dayanağı")
                 new_series_trigger = st.text_input("Süreç tetikleyicisi", value="Dosyanın Kapanışı")
                 if st.form_submit_button("Seriyi kaydet", type="primary") and new_series_name.strip() and new_series_code.strip():
                     conn = get_db()
                     try:
-                        conn.execute("INSERT INTO series (name, unit_code, unit_name, series_code, retention_year, legal_basis, trigger_event) VALUES (?, ?, ?, ?, ?, ?, ?)", (new_series_name.strip(), new_series_unit.strip(), "", new_series_code.strip(), new_series_retention, new_series_basis.strip(), new_series_trigger.strip()))
+                        ret_to_save = 100 if new_series_is_permanent else int(new_series_retention)
+                        conn.execute("INSERT INTO series (name, unit_code, unit_name, series_code, retention_year, legal_basis, trigger_event, active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)", (new_series_name.strip(), new_series_unit.strip(), "", new_series_code.strip(), ret_to_save, new_series_basis.strip(), new_series_trigger.strip()))
                         conn.commit()
-                        audit(active_user, "Seri Tanımı", f"{new_series_code} · {new_series_name}", object_id=new_series_code.strip())
+                        audit(active_user, "Seri Tanımı Ekleme", f"{new_series_code} · {new_series_name}", object_id=new_series_code.strip())
                         st.success("Seri kaydedildi.")
                         st.rerun()
                     except sqlite3.IntegrityError:
@@ -927,8 +1283,8 @@ elif menu == "Tanımlar" and is_admin:
 
     with definition_tabs[2]:
         institution_search = st.text_input("Kurumlarda ara", placeholder="Kurum adı veya kodu...")
-        institution_query = "SELECT id AS [ID], name AS [Kurum Adı], code AS [Kurum Kodu] FROM institutions WHERE 1=1"
-        institution_params = []
+        institution_query = "SELECT id AS [ID], name AS [Kurum Adı], code AS [Kurum Kodu] FROM institutions WHERE active = 1"
+        institution_params: list[Any] = []
         if institution_search.strip():
             institution_query += " AND (name LIKE ? OR code LIKE ?)"
             institution_params.extend([f"%{institution_search.strip()}%"] * 2)
@@ -940,9 +1296,9 @@ elif menu == "Tanımlar" and is_admin:
                 if st.form_submit_button("Kurumu kaydet", type="primary") and new_institution_name.strip() and new_institution_code.strip():
                     conn = get_db()
                     try:
-                        conn.execute("INSERT INTO institutions (name, code) VALUES (?, ?)", (new_institution_name.strip(), new_institution_code.strip()))
+                        conn.execute("INSERT INTO institutions (name, code, active) VALUES (?, ?, 1)", (new_institution_name.strip(), new_institution_code.strip()))
                         conn.commit()
-                        audit(active_user, "Kurum Tanımı", f"{new_institution_code} · {new_institution_name}", object_id=new_institution_code.strip())
+                        audit(active_user, "Kurum Tanımı Ekleme", f"{new_institution_code} · {new_institution_name}", object_id=new_institution_code.strip())
                         st.success("Kurum kaydedildi.")
                         st.rerun()
                     except sqlite3.IntegrityError:
@@ -954,41 +1310,92 @@ elif menu == "Tanımlar" and is_admin:
         st.markdown("### Sistem Kullanıcıları ve Yetkilendirme (RBAC)")
         all_users = read_df("SELECT id AS [ID], username AS [Kullanıcı Adı], full_name AS [Ad Soyad], unit_code AS [Birim], auth_codes AS [Yetkiler], role_desc AS [Rol], active AS [Aktif] FROM user_permissions ORDER BY id")
         st.dataframe(all_users, width="stretch", hide_index=True)
-        with st.expander("👤 Yeni Kullanıcı ve Yetki Tanımla"):
-            with st.form("new_user_form"):
-                u_name = st.text_input("Kullanıcı Adı / Sicil No")
-                u_fullname = st.text_input("Ad Soyad")
-                u_unit = st.text_input("Birim Kodu (Tümü için ALL)")
-                u_role = st.selectbox("Rol Tanımı", ["Arşiv Sorumlusu", "Birim Kullanıcısı", "Yönetici"])
-                u_auth = st.multiselect("Yetki Kodları", ["ADMIN", "TALEP_YONETIM", "IMHA", "DENETIM", "LEGAL_HOLD"], default=["TALEP_YONETIM"])
-                if st.form_submit_button("Kullanıcıyı Kaydet", type="primary") and u_name.strip() and u_fullname.strip():
-                    conn = get_db()
-                    try:
-                        conn.execute("INSERT INTO user_permissions (username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, 1)", (u_name.strip(), u_fullname.strip(), u_unit.strip(), ",".join(u_auth), u_role))
-                        conn.commit()
-                        audit(active_user, "Kullanıcı Tanımlama", f"{u_name} · {u_fullname}", object_id=u_name.strip())
-                        st.success("Kullanıcı başarıyla kaydedildi.")
-                        st.rerun()
-                    except sqlite3.IntegrityError:
-                        st.error("Bu kullanıcı adı zaten mevcut.")
-                    finally:
-                        conn.close()
+        
+        c_u1, c_u2 = st.columns(2)
+        with c_u1:
+            with st.expander("Yeni Kullanıcı Tanımla"):
+                with st.form("new_user_form"):
+                    u_name = st.text_input("Kullanıcı Adı / Sicil No")
+                    u_fullname = st.text_input("Ad Soyad")
+                    u_unit = st.text_input("Birim Kodu (Tümü için ALL)")
+                    u_role = st.selectbox("Rol Tanımı", ["Arşiv Sorumlusu", "Birim Kullanıcısı", "Yönetici"])
+                    u_auth = st.multiselect("Yetki Kodları", ["ADMIN", "TALEP_YONETIM", "IMHA_TALEP", "IMHA_ONAY", "DENETIM", "LEGAL_HOLD", "TANIM_YONETIM", "RAPOR_GORUNTULE"], default=["TALEP_YONETIM"])
+                    if st.form_submit_button("Kullanıcıyı Kaydet", type="primary") and u_name.strip() and u_fullname.strip():
+                        conn = get_db()
+                        now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                        try:
+                            conn.execute("""
+                                INSERT INTO user_permissions (username, full_name, unit_code, auth_codes, role_desc, active, created_at, created_by) 
+                                VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+                            """, (u_name.strip(), u_fullname.strip(), u_unit.strip(), ",".join(u_auth), u_role, now_stamp, active_user))
+                            conn.commit()
+                            audit(active_user, "Kullanıcı Tanımlama", f"Kullanıcı eklendi: {u_name} ({u_fullname}), Birim: {u_unit}, Rol: {u_role}, Yetkiler: {','.join(u_auth)}", object_id=u_name.strip())
+                            st.success("Kullanıcı başarıyla kaydedildi.")
+                            st.rerun()
+                        except sqlite3.IntegrityError:
+                            st.error("Bu kullanıcı adı zaten mevcut.")
+                        finally:
+                            conn.close()
+
+        with c_u2:
+            with st.expander("Kullanıcı Düzenle / Pasifleştir"):
+                if not all_users.empty:
+                    with st.form("edit_user_form"):
+                        target_username = st.selectbox("Düzenlenecek Kullanıcı", all_users["Kullanıcı Adı"].tolist())
+                        target_row = all_users[all_users["Kullanıcı Adı"] == target_username].iloc[0]
+                        edit_fullname = st.text_input("Ad Soyad", value=str(target_row["Ad Soyad"]))
+                        edit_unit = st.text_input("Birim Kodu", value=str(target_row["Birim"]))
+                        edit_role = st.text_input("Rol Tanımı", value=str(target_row["Rol"]))
+                        edit_auth = st.text_input("Yetki Kodları (virgülle ayırın)", value=str(target_row["Yetkiler"] or ""))
+                        edit_active = st.checkbox("Aktif Durumda", value=bool(target_row["Aktif"] == 1))
+                        if st.form_submit_button("Güncelle", type="primary"):
+                            conn = get_db()
+                            cursor = conn.cursor()
+                            cursor.execute("SELECT COUNT(*) FROM user_permissions WHERE active = 1 AND (LOWER(role_desc) LIKE '%yönetici%' OR LOWER(role_desc) LIKE '%admin%' OR auth_codes LIKE '%ADMIN%')")
+                            active_admin_count = cursor.fetchone()[0]
+                            is_target_admin = is_admin_user(target_row)
+                            
+                            if is_target_admin and not edit_active and active_admin_count <= 1:
+                                st.error("Sistemdeki son aktif yönetici hesabı pasifleştirilemez.")
+                            elif target_username == active_user and not edit_active:
+                                st.error("Kendi aktif kullanıcı hesabınızı pasif duruma alamazsınız.")
+                            else:
+                                now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                                old_state = f"Ad Soyad: {target_row['Ad Soyad']}, Birim: {target_row['Birim']}, Rol: {target_row['Rol']}, Yetkiler: {target_row['Yetkiler']}, Aktif: {target_row['Aktif']}"
+                                new_state = f"Ad Soyad: {edit_fullname.strip()}, Birim: {edit_unit.strip()}, Rol: {edit_role.strip()}, Yetkiler: {edit_auth.strip()}, Aktif: {1 if edit_active else 0}"
+                                cursor.execute("""
+                                    UPDATE user_permissions SET
+                                        full_name = ?, unit_code = ?, role_desc = ?, auth_codes = ?, active = ?, updated_at = ?, updated_by = ?
+                                    WHERE username = ?
+                                """, (edit_fullname.strip(), edit_unit.strip(), edit_role.strip(), edit_auth.strip(), 1 if edit_active else 0, now_stamp, active_user, target_username))
+                                conn.commit()
+                                audit(active_user, "Kullanıcı Güncelleme", f"Kullanıcı: {target_username} | Eski: [{old_state}] -> Yeni: [{new_state}]", object_id=target_username)
+                                st.success("Kullanıcı güncellendi.")
+                                st.rerun()
+                            conn.close()
 
 # =========================================================
-# MENÜ: ERİŞİM TALEPLERİ
+# 11. MENÜ: ERİŞİM TALEPLERİ
 # =========================================================
 elif menu == "Erişim Talepleri":
     header("Erişim talepleri", "Arşiv belgelerine yönelik erişim taleplerini takip et ve yönet.")
     can_manage = can_manage_requests(active_row)
-    filter_sql = "" if can_manage else " AND requester = ?"
-    filter_params = () if can_manage else (active_name,)
+    
+    filter_sql = ""
+    filter_params: list[Any] = []
+    if not can_manage:
+        filter_sql = " AND (requester_username = ? OR requester = ?)"
+        filter_params.extend([active_user, active_name])
+    elif active_unit != "ALL":
+        filter_sql = " AND unit_code = ?"
+        filter_params.append(active_unit)
 
     queue_df = read_df(
-        f"""
-        SELECT id, req_no AS [Talep], requester AS [Talep Eden], unit_code AS [Birim],
+        """
+        SELECT id, req_no AS [Talep], requester AS [Talep Eden], requester_username AS [Sicil], unit_code AS [Birim],
                doc_item AS [Kayıt], delivery_type AS [Teslim], urgency AS [Öncelik],
                status AS [Durum], created_at AS [Oluşturuldu], notes AS [Not]
-        FROM archive_requests WHERE 1=1 {filter_sql} ORDER BY id DESC
+        FROM archive_requests WHERE 1=1 """ + filter_sql + """ ORDER BY id DESC
         """,
         filter_params
     )
@@ -1002,7 +1409,7 @@ elif menu == "Erişim Talepleri":
     if queue_df.empty or "Talep" not in queue_df.columns:
         st.info("Görüntülenecek talep bulunmamaktadır.")
     else:
-        st.dataframe(queue_df.drop(columns=["id"], errors="ignore"), width="stretch", hide_index=True, height=350)
+        st.dataframe(queue_df.drop(columns=["id", "Sicil"], errors="ignore"), width="stretch", hide_index=True, height=350)
         st.markdown("### Talep işlemleri")
         u1, u2, u3 = st.columns([2, 2, 1])
         with u1:
@@ -1013,12 +1420,21 @@ elif menu == "Erişim Talepleri":
             if can_manage:
                 if st.button("Güncelle", type="primary", width="stretch"):
                     conn = get_db()
-                    conn.execute("UPDATE archive_requests SET status = ? WHERE req_no = ?", (new_status, selected_request))
-                    conn.commit()
+                    cursor = conn.cursor()
+                    scope_where = " AND unit_code = ?" if active_unit != "ALL" else ""
+                    scope_p = [new_status, selected_request]
+                    if active_unit != "ALL":
+                        scope_p.append(active_unit)
+                    cursor.execute(f"UPDATE archive_requests SET status = ? WHERE req_no = ? {scope_where}", tuple(scope_p))
+                    if cursor.rowcount == 1:
+                        conn.commit()
+                        audit(active_user, "Talep Durumu Güncelleme", f"{selected_request} → {new_status}", object_id=selected_request)
+                        st.success("Talep durumu güncellendi.")
+                        st.rerun()
+                    else:
+                        conn.rollback()
+                        st.error("Bu talebi güncelleme yetkiniz bulunmamaktadır.")
                     conn.close()
-                    audit(active_user, "Talep Durumu Güncelleme", f"{selected_request} → {new_status}", object_id=selected_request)
-                    st.success("Talep durumu güncellendi.")
-                    st.rerun()
             else:
                 st.caption("Talep durumunu yalnızca yetkili kullanıcılar güncelleyebilir.")
 
@@ -1031,16 +1447,28 @@ elif menu == "Erişim Talepleri":
             message = st.text_input("Mesaj", placeholder="Konum, teslimat veya inceleme notu...")
             if st.form_submit_button("Mesajı kaydet") and message.strip():
                 conn = get_db()
-                now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
-                conn.execute("INSERT INTO request_messages (req_no, sender, message, created_at) VALUES (?, ?, ?, ?)", (selected_request, active_name, message.strip(), now_stamp))
-                conn.commit()
+                cursor = conn.cursor()
+                cursor.execute("SELECT unit_code, requester_username, requester FROM archive_requests WHERE req_no = ?", (selected_request,))
+                req_info = cursor.fetchone()
+                if not req_info:
+                    st.error("Talep bulunamadı.")
+                else:
+                    req_unit, req_usr, req_name = req_info[0], req_info[1], req_info[2]
+                    is_owner = (req_usr == active_user or req_name == active_name)
+                    has_scope = assert_unit_access(active_row, req_unit)
+                    if not (can_manage and has_scope) and not is_owner:
+                        st.error("Bu talebe mesaj ekleme yetkiniz bulunmamaktadır.")
+                    else:
+                        now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                        cursor.execute("INSERT INTO request_messages (req_no, sender, message, created_at) VALUES (?, ?, ?, ?)", (selected_request, active_name, message.strip(), now_stamp))
+                        conn.commit()
+                        audit(active_user, "Talep Mesajı Ekleme", f"{selected_request} talebine mesaj eklendi", object_id=selected_request)
+                        st.success("Mesaj kaydedildi.")
+                        st.rerun()
                 conn.close()
-                audit(active_user, "Talep Mesajı Ekleme", f"{selected_request} talebine mesaj eklendi", object_id=selected_request)
-                st.success("Mesaj kaydedildi.")
-                st.rerun()
 
 # =========================================================
-# MENÜ: SAKLAMA VE İMHA (KONTROLLÜ İŞ AKIŞI)
+# 12. MENÜ: SAKLAMA VE İMHA (BACKEND ENFORCED WORKFLOW)
 # =========================================================
 elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
     st.markdown("### Saklama ve İmha Yönetimi")
@@ -1049,17 +1477,19 @@ elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
     with tab1:
         st.markdown("#### İmha Edilecek Belgeler Listesi")
         scope_dest_sql = " AND unit_code = ?" if active_unit != "ALL" else ""
-        scope_dest_params = (CURRENT_YEAR, active_unit) if active_unit != "ALL" else (CURRENT_YEAR,)
+        scope_dest_params = [CURRENT_YEAR]
+        if active_unit != "ALL":
+            scope_dest_params.append(active_unit)
         
-        pending_df = read_df(f"""
+        pending_df = read_df("""
             SELECT doc_reg_no AS 'Kayıt No', doc_no AS 'Dosya No', doc_name AS 'Belge Adı', 
-                   unit_code AS 'Birim', retention_end_year AS 'İmha Yılı', 
+                   unit_code AS 'Birim', 
+                   CASE WHEN retention_end_year >= 9000 THEN 'Süresiz' ELSE CAST(retention_end_year AS TEXT) END AS 'İmha Yılı', 
                    destruction_status AS 'Durum', legal_hold AS 'Hukuki Engel',
                    destruction_requested_by AS 'İmha Talep Eden'
             FROM aygaz_main_archive 
             WHERE (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') 
-              AND CAST(retention_end_year AS INTEGER) <= ? {scope_dest_sql}
-        """, scope_dest_params)
+              AND CAST(retention_end_year AS INTEGER) <= ? """ + scope_dest_sql, tuple(scope_dest_params))
 
         if not pending_df.empty and "Kayıt No" in pending_df.columns:
             st.dataframe(pending_df, width="stretch", hide_index=True)
@@ -1071,45 +1501,85 @@ elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
                 selected_record_no = st.selectbox("İşlem yapılacak belgeyi seçin:", pending_df["Kayıt No"].tolist())
                 selected_item = pending_df[pending_df["Kayıt No"] == selected_record_no].iloc[0]
             
-            cur_status = selected_item["Durum"]
-            is_held = selected_item["Hukuki Engel"] == 1
-            requester = selected_item.get("İmha Talep Eden", "")
+            cur_status = str(selected_item["Durum"])
+            is_held = int(selected_item["Hukuki Engel"]) == 1
+            requester = str(selected_item.get("İmha Talep Eden", "") or "")
 
             with col_act1:
                 st.write("")
                 st.write("")
-                if cur_status == "BEKLİYOR":
+                if cur_status == "BEKLİYOR" and can_create_destruction_request(active_row):
                     if st.button("İmha Talebi Oluştur", type="primary", use_container_width=True):
-                        conn = get_db()
-                        conn.execute("UPDATE aygaz_main_archive SET destruction_status = 'ONAY BEKLİYOR', destruction_requested_by = ? WHERE doc_reg_no = ?", (active_user, str(selected_record_no)))
-                        conn.commit()
-                        conn.close()
-                        audit(active_user, "İmha Talebi Açma", f"Kayıt No {selected_record_no} için imha talebi açıldı.", object_id=str(selected_record_no))
-                        st.success("İmha talebi oluşturuldu, onay bekleniyor.")
-                        st.rerun()
+                        if is_held:
+                            st.error("Bu kayıt üzerinde aktif bir Hukuki Engel (Hold) bulunmaktadır. İmha talebi açılamaz.")
+                        else:
+                            conn = get_db()
+                            cursor = conn.cursor()
+                            now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                            scope_cond = " AND unit_code = ?" if active_unit != "ALL" else ""
+                            req_params = [active_user, now_stamp, str(selected_record_no), CURRENT_YEAR]
+                            if active_unit != "ALL":
+                                req_params.append(active_unit)
+                            
+                            cursor.execute(f"""
+                                UPDATE aygaz_main_archive SET 
+                                    destruction_status = 'ONAY BEKLİYOR', 
+                                    destruction_requested_by = ?,
+                                    destruction_requested_at = ?
+                                WHERE doc_reg_no = ? 
+                                  AND destruction_status = 'BEKLİYOR'
+                                  AND CAST(retention_end_year AS INTEGER) <= ?
+                                  AND (legal_hold = 0 OR legal_hold IS NULL)
+                                  {scope_cond}
+                            """, tuple(req_params))
+                            
+                            if cursor.rowcount == 1:
+                                conn.commit()
+                                audit(active_user, "İmha Talebi Açma", f"Kayıt No {selected_record_no} için imha talebi açıldı.", object_id=str(selected_record_no))
+                                st.success("İmha talebi oluşturuldu, onay bekleniyor.")
+                                st.rerun()
+                            else:
+                                conn.rollback()
+                                st.error("İmha talebi oluşturulamadı: Kayıt hukuki kilit altında olabilir, saklama süresi dolmamış olabilir veya birim yetkiniz yetersizdir.")
+                            conn.close()
 
             with col_act2:
                 st.write("")
                 st.write("")
-                if cur_status == "ONAY BEKLİYOR":
+                if cur_status == "ONAY BEKLİYOR" and can_approve_destruction(active_row):
                     if st.button("İmha İşlemini Onayla", type="primary", use_container_width=True):
-                        if is_held:
-                            st.error("Bu kayıt üzerinde aktif bir HUKUKİ ENGEL bulunmaktadır. Kaldırılmadan imha edilemez!")
-                        elif requester == active_user and not is_admin_user(active_row):
-                            st.error("Görevler ayrılığı kuralı: Kendi talep ettiğiniz imha işlemini kendiniz onaylayamazsınız.")
-                        else:
-                            today_str = suanki_zaman().strftime("%d.%m.%Y")
-                            conn = get_db()
-                            conn.execute("""
-                                UPDATE aygaz_main_archive 
-                                SET destruction_status = 'İMHA EDİLDİ', destruction_date = ? 
-                                WHERE doc_reg_no = ?
-                            """, (today_str, str(selected_record_no)))
+                        conn = get_db()
+                        cursor = conn.cursor()
+                        iso_today = suanki_zaman().strftime("%Y-%m-%d")
+                        now_stamp = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
+                        scope_cond = " AND unit_code = ?" if active_unit != "ALL" else ""
+                        appr_params = [iso_today, active_user, now_stamp, str(selected_record_no), active_user, CURRENT_YEAR]
+                        if active_unit != "ALL":
+                            appr_params.append(active_unit)
+
+                        cursor.execute(f"""
+                            UPDATE aygaz_main_archive SET 
+                                destruction_status = 'İMHA EDİLDİ', 
+                                destruction_date = ?,
+                                destruction_approved_by = ?,
+                                destruction_approved_at = ?
+                            WHERE doc_reg_no = ? 
+                              AND destruction_status = 'ONAY BEKLİYOR'
+                              AND destruction_requested_by != ?
+                              AND (legal_hold = 0 OR legal_hold IS NULL)
+                              AND CAST(retention_end_year AS INTEGER) <= ?
+                              {scope_cond}
+                        """, tuple(appr_params))
+
+                        if cursor.rowcount == 1:
                             conn.commit()
-                            conn.close()
                             audit(active_user, "Belge İmhası Onaylama", f"Kayıt No {selected_record_no} resmi olarak imha edildi.", object_id=str(selected_record_no))
                             st.success(f"Kayıt No {selected_record_no} başarıyla imha edildi olarak işlendi.")
                             st.rerun()
+                        else:
+                            conn.rollback()
+                            st.error("İmha onayı başarısız: Görevler ayrılığı kuralı (kendi talebinizi onaylayamazsınız), aktif hukuki kilit veya birim yetki kısıtı nedeniyle işlem durduruldu.")
+                        conn.close()
         else:
             st.info("İmha süresi dolmuş bekleyen belge bulunmamaktadır.")
 
@@ -1118,22 +1588,26 @@ elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
         destroyed_query = """
             SELECT doc_reg_no AS 'Kayıt No', doc_no AS 'Dosya No', doc_name AS 'Belge Adı', 
                    unit_code AS 'Birim', retention_end_year AS 'İmha Yılı', 
-                   destruction_date AS 'İmha Tarihi', destruction_status AS 'Durum' 
+                   destruction_date AS 'İmha Tarihi', destruction_status AS 'Durum',
+                   destruction_requested_by AS 'Talep Eden', destruction_approved_by AS 'Onaylayan'
             FROM aygaz_main_archive 
             WHERE destruction_status = 'İMHA EDİLDİ'
+              AND (destruction_date LIKE ? OR CAST(retention_end_year AS TEXT) = ?)
         """
-        dest_params = []
+        dest_params: list[Any] = [f"%{CURRENT_YEAR}%", str(CURRENT_YEAR)]
         if active_unit != "ALL":
             destroyed_query += " AND unit_code = ?"
             dest_params.append(active_unit)
-        destroyed_query += f" AND (destruction_date LIKE '%{CURRENT_YEAR}%' OR retention_end_year = '{CURRENT_YEAR}')"
 
         destroyed_df = read_df(destroyed_query, dest_params)
         if not destroyed_df.empty:
-            st.dataframe(destroyed_df, width="stretch", hide_index=True)
+            display_destroyed = destroyed_df.copy()
+            if "İmha Tarihi" in display_destroyed.columns:
+                display_destroyed["İmha Tarihi"] = display_destroyed["İmha Tarihi"].apply(format_db_date)
+            st.dataframe(display_destroyed, width="stretch", hide_index=True)
             download_excel(
                 f"{CURRENT_YEAR} İmha Edilen Belgeler Listesini İndir (Excel)",
-                destroyed_df,
+                display_destroyed,
                 f"Aygaz_Imha_Edilen_Belgeler_{CURRENT_YEAR}.xlsx",
                 sheet_name="Imha_Listesi",
                 user=active_user
@@ -1142,24 +1616,26 @@ elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
             st.info(f"{CURRENT_YEAR} yılı için yetki kapsamınızda imha edilmiş bir belge kaydı bulunmuyor.")
 
 # =========================================================
-# MENÜ: GÜNLÜKLER (YÖNETİM RAPORLARI)
+# 13. MENÜ: GÜNLÜKLER (YÖNETİM RAPORLARI)
 # =========================================================
-elif menu == "Günlükler" and is_admin:
+elif menu == "Günlükler" and can_view_reports(active_row):
     header("Yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
     
     rep_unit_sql = " WHERE unit_code = ?" if active_unit != "ALL" else ""
-    rep_unit_params = (CURRENT_YEAR, active_unit) if active_unit != "ALL" else (CURRENT_YEAR,)
+    rep_unit_params: list[Any] = [CURRENT_YEAR]
+    if active_unit != "ALL":
+        rep_unit_params.append(active_unit)
     
-    unit_report = read_df(f"""
+    unit_report = read_df("""
         SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt], 
                SUM(CASE WHEN status = 'Zimmette' THEN 1 ELSE 0 END) AS [Zimmette], 
                SUM(CASE WHEN retention_end_year <= ? AND (destruction_status IS NULL OR destruction_status != 'İMHA EDİLDİ') THEN 1 ELSE 0 END) AS [Süre riski] 
-        FROM aygaz_main_archive {rep_unit_sql} GROUP BY unit_code ORDER BY [Kayıt] DESC
-    """, rep_unit_params)
+        FROM aygaz_main_archive """ + rep_unit_sql + """ GROUP BY unit_code ORDER BY [Kayıt] DESC
+    """, tuple(rep_unit_params))
     
     rep_status_sql = " WHERE unit_code = ?" if active_unit != "ALL" else ""
-    rep_status_params = (active_unit,) if active_unit != "ALL" else ()
-    status_report = read_df(f"SELECT status AS [Durum], COUNT(*) AS [Kayıt] FROM aygaz_main_archive {rep_status_sql} GROUP BY status ORDER BY [Kayıt] DESC", rep_status_params)
+    rep_status_params: list[Any] = [active_unit] if active_unit != "ALL" else []
+    status_report = read_df("SELECT status AS [Durum], COUNT(*) AS [Kayıt] FROM aygaz_main_archive " + rep_status_sql + " GROUP BY status ORDER BY [Kayıt] DESC", tuple(rep_status_params))
     
     r1, r2 = st.columns(2)
     with r1:
@@ -1177,43 +1653,78 @@ elif menu == "Günlükler" and is_admin:
     report_tabs = st.tabs(["Günlük kayıtlar", "Aylık kayıtlar"])
     with report_tabs[0]:
         report_day = st.date_input("Gün", value=suanki_zaman().date())
+        # dd/mm/yyyy veya yyyy-mm-dd formatlarının ikisini de destekle
+        day_str_tr = report_day.strftime("%d/%m/%Y")
+        day_str_iso = report_day.strftime("%Y-%m-%d")
+        
         daily_scope_sql = " AND unit_code = ?" if active_unit != "ALL" else ""
-        daily_scope_params = (active_unit,) if active_unit != "ALL" else ()
-        daily_report = read_df(f"""
-            SELECT substr(first_doc_date, 7, 4) || '-' || substr(first_doc_date, 4, 2) || '-' || substr(first_doc_date, 1, 2) AS [Kayıt Tarihi], 
+        daily_scope_params: list[Any] = [day_str_tr, day_str_iso]
+        if active_unit != "ALL":
+            daily_scope_params.append(active_unit)
+            
+        daily_report = read_df("""
+            SELECT first_doc_date AS [Kayıt Tarihi], 
                    unit_code AS [Birim], COUNT(*) AS [Kayıt Sayısı] 
-            FROM aygaz_main_archive WHERE first_doc_date IS NOT NULL {daily_scope_sql}
-            GROUP BY [Kayıt Tarihi], unit_code ORDER BY [Kayıt Tarihi] DESC
-        """, daily_scope_params)
+            FROM aygaz_main_archive 
+            WHERE (first_doc_date = ? OR first_doc_date LIKE ? || '%') """ + daily_scope_sql + """
+            GROUP BY first_doc_date, unit_code ORDER BY [Kayıt Sayısı] DESC
+        """, tuple(daily_scope_params))
         st.dataframe(daily_report, width="stretch", hide_index=True, height=220)
         download_excel("Günlük Excel indir", daily_report, "aygaz-gunluk-kayitlar.xlsx", "Günlük Kayıtlar", user=active_user)
         
     with report_tabs[1]:
+        selected_month = st.selectbox("Ay Seçin", list(range(1, 13)), index=suanki_zaman().month - 1)
+        selected_year = st.selectbox("Yıl Seçin", [CURRENT_YEAR - i for i in range(5)], index=0)
+        month_pattern_tr = f"%/{selected_month:02d}/{selected_year}"
+        month_pattern_iso = f"{selected_year}-{selected_month:02d}%"
+        
         monthly_scope_sql = " AND unit_code = ?" if active_unit != "ALL" else ""
-        monthly_scope_params = (active_unit,) if active_unit != "ALL" else ()
-        monthly_report = read_df(f"""
-            SELECT substr(first_doc_date, 7, 4) || '-' || substr(first_doc_date, 4, 2) AS [Ay], 
-                   unit_code AS [Birim], COUNT(*) AS [Kayıt Sayısı] 
-            FROM aygaz_main_archive WHERE first_doc_date IS NOT NULL {monthly_scope_sql}
-            GROUP BY [Ay], unit_code ORDER BY [Ay] DESC
-        """, monthly_scope_params)
+        monthly_scope_params: list[Any] = [month_pattern_tr, month_pattern_iso]
+        if active_unit != "ALL":
+            monthly_scope_params.append(active_unit)
+            
+        monthly_report = read_df("""
+            SELECT unit_code AS [Birim], COUNT(*) AS [Kayıt Sayısı] 
+            FROM aygaz_main_archive 
+            WHERE (first_doc_date LIKE ? OR first_doc_date LIKE ?) """ + monthly_scope_sql + """
+            GROUP BY unit_code ORDER BY [Kayıt Sayısı] DESC
+        """, tuple(monthly_scope_params))
         st.dataframe(monthly_report, width="stretch", hide_index=True, height=220)
         download_excel("Aylık Excel indir", monthly_report, "aygaz-aylik-kayitlar.xlsx", "Aylık Kayıtlar", user=active_user)
         
     download_excel("Yönetim raporunu indir", unit_report, "aygaz-arsiv-yonetim-raporu.xlsx", "Birim Raporu", {"Durum Raporu": status_report}, user=active_user)
 
 # =========================================================
-# MENÜ: DENETİM İZİ (AUDIT TRAIL)
+# 14. MENÜ: DENETİM İZİ (AUDIT TRAIL)
 # =========================================================
 elif menu == "Denetim izi" and can_view_audit(active_row):
     header("Denetim izi", "Arşivde kim, ne zaman, hangi kararı verdi?")
+    
+    # Audit zincir bütünlüğü kontrolü
+    is_valid, verify_msg = verify_audit_hash_chain()
+    if is_valid:
+        st.markdown(f'<div class="hint"><b>Hash zinciri bütünlüğü: GEÇERLİ</b><br>{verify_msg}</div><br>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="risk"><b>Hash zinciri bütünlüğü: UYUŞMAZLIK TESPİT EDİLDİ</b><br>{verify_msg}</div><br>', unsafe_allow_html=True)
+
+    audit_scope_sql = ""
+    audit_scope_params: list[Any] = []
+    if active_unit != "ALL" and not is_admin:
+        audit_scope_sql = """
+            WHERE (
+                a.user = ? 
+                OR a.object_id IN (SELECT doc_reg_no FROM aygaz_main_archive WHERE unit_code = ?)
+                OR a.object_id IN (SELECT req_no FROM archive_requests WHERE unit_code = ?)
+            )
+        """
+        audit_scope_params = [active_user, active_unit, active_unit]
+
     audit_df = read_df("""
-        SELECT timestamp AS [Zaman], user AS [Kullanıcı], action_type AS [İşlem], 
-               object_id AS [Kayıt No], details AS [Detay], result AS [Sonuç], 
-               event_hash AS [SHA-256 İmzası] 
-        FROM archive_audit ORDER BY id DESC LIMIT 250
-    """)
-    st.markdown('<div class="hint">Bu akış kullanıcı ve veri işlemlerini kriptografik hash zinciriyle tutar. Kayıtlar geriye dönük değiştirilemez.</div>', unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+        SELECT a.timestamp AS [Zaman], a.user AS [Kullanıcı], a.action_type AS [İşlem], 
+               a.object_id AS [Kayıt No], a.details AS [Detay], a.result AS [Sonuç], 
+               a.event_hash AS [SHA-256 İmzası] 
+        FROM archive_audit a """ + audit_scope_sql + """ ORDER BY a.id DESC LIMIT 250
+    """, tuple(audit_scope_params))
+    
     st.dataframe(audit_df, width="stretch", hide_index=True, height=520)
     download_excel("Denetim İzi Excel İndir", audit_df, "aygaz-arsiv-denetim-izi.xlsx", "Denetim İzi", user=active_user)
