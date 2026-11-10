@@ -387,10 +387,25 @@ def ensure_column_exists(conn: sqlite3.Connection, table_name: str, col_name: st
         logger.info(f"Migration: {table_name}.{col_name} kolonu başarıyla eklendi.")
 
 def execute_migrations() -> None:
+    # 1. Migration Öncesi Otomatik Yedekleme Adımı
+    if DB_PATH.exists():
+        try:
+            backup_path = DB_PATH.with_suffix(f".bak_{int(datetime.now().timestamp())}")
+            import shutil
+            shutil.copy2(DB_PATH, backup_path)
+            logger.info(f"Veritabanı yedeği başarıyla alındı: {backup_path}")
+        except Exception as e:
+            logger.critical(f"Kritik Hata: Veritabanı yedeği alınamadı, migration durduruldu! Hata: {e}")
+            st.error("Güvenlik Uyarısı: Veritabanı yedeği alınamadığı için sistem başlatılamadı.")
+            st.stop()
+
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Transaction bütünlüğü için güvenli blok
         cursor.execute("BEGIN IMMEDIATE")
+        
+        # Sürüm kontrollü migration tablosu
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS schema_migrations (
                 version INTEGER PRIMARY KEY,
@@ -398,91 +413,99 @@ def execute_migrations() -> None:
             )
         """)
         
-        cursor.executescript("""
-            CREATE TABLE IF NOT EXISTS institutions (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                code TEXT NOT NULL UNIQUE,
-                active INTEGER DEFAULT 1
-            );
-            CREATE TABLE IF NOT EXISTS units (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                code TEXT NOT NULL UNIQUE,
-                inst_code TEXT,
-                inst_name TEXT,
-                active INTEGER DEFAULT 1
-            );
-            CREATE TABLE IF NOT EXISTS series (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                unit_code TEXT,
-                unit_name TEXT,
-                series_code TEXT NOT NULL UNIQUE,
-                retention_year INTEGER,
-                legal_basis TEXT,
-                active INTEGER DEFAULT 1
-            );
-            CREATE TABLE IF NOT EXISTS user_permissions (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL UNIQUE,
-                full_name TEXT NOT NULL,
-                unit_code TEXT NOT NULL DEFAULT 'ALL',
-                auth_codes TEXT,
-                role_desc TEXT,
-                password_hash TEXT,
-                active INTEGER DEFAULT 1
-            );
-            CREATE TABLE IF NOT EXISTS aygaz_main_archive (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                doc_reg_no TEXT NOT NULL UNIQUE,
-                doc_no TEXT,
-                doc_name TEXT NOT NULL,
-                series_code TEXT,
-                unit_code TEXT,
-                first_doc_date TEXT,
-                last_doc_date TEXT,
-                box_no TEXT,
-                shelf_no TEXT,
-                institution TEXT,
-                status TEXT DEFAULT 'Depoda',
-                destruction_status TEXT DEFAULT 'BEKLİYOR',
-                destruction_date TEXT,
-                retention_end_year INTEGER
-            );
-            CREATE TABLE IF NOT EXISTS archive_requests (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                req_no TEXT NOT NULL UNIQUE,
-                requester TEXT NOT NULL,
-                unit_code TEXT NOT NULL,
-                doc_item TEXT NOT NULL,
-                delivery_type TEXT NOT NULL,
-                urgency TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'Onay Bekliyor',
-                notes TEXT,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS request_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                req_no TEXT NOT NULL,
-                sender TEXT NOT NULL,
-                message TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS archive_audit (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                user TEXT NOT NULL,
-                action_type TEXT NOT NULL,
-                details TEXT,
-                object_id TEXT,
-                session_id TEXT,
-                result TEXT DEFAULT 'SUCCESS',
-                previous_hash TEXT,
-                event_hash TEXT NOT NULL
-            );
-        """)
+        # Uygulanmış migration versiyonlarını kontrol et
+        applied_versions = {row[0] for row in cursor.execute("SELECT version FROM schema_migrations").fetchall()}
+        
+        # Temel Şema (Migration Versiyon 1)
+        if 1 not in applied_versions:
+            cursor.executescript("""
+                CREATE TABLE IF NOT EXISTS institutions (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    code TEXT NOT NULL UNIQUE,
+                    active INTEGER DEFAULT 1
+                );
+                CREATE TABLE IF NOT EXISTS units (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    code TEXT NOT NULL UNIQUE,
+                    inst_code TEXT,
+                    inst_name TEXT,
+                    active INTEGER DEFAULT 1
+                );
+                CREATE TABLE IF NOT EXISTS series (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    unit_code TEXT,
+                    unit_name TEXT,
+                    series_code TEXT NOT NULL UNIQUE,
+                    retention_year INTEGER,
+                    legal_basis TEXT,
+                    active INTEGER DEFAULT 1
+                );
+                CREATE TABLE IF NOT EXISTS user_permissions (
+                    id INTEGER PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE,
+                    full_name TEXT NOT NULL,
+                    unit_code TEXT NOT NULL DEFAULT 'ALL',
+                    auth_codes TEXT,
+                    role_desc TEXT,
+                    password_hash TEXT,
+                    active INTEGER DEFAULT 1
+                );
+                CREATE TABLE IF NOT EXISTS aygaz_main_archive (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    doc_reg_no TEXT NOT NULL UNIQUE,
+                    doc_no TEXT,
+                    doc_name TEXT NOT NULL,
+                    series_code TEXT,
+                    unit_code TEXT,
+                    first_doc_date TEXT,
+                    last_doc_date TEXT,
+                    box_no TEXT,
+                    shelf_no TEXT,
+                    institution TEXT,
+                    status TEXT DEFAULT 'Depoda',
+                    destruction_status TEXT DEFAULT 'BEKLİYOR',
+                    destruction_date TEXT,
+                    retention_end_year INTEGER
+                );
+                CREATE TABLE IF NOT EXISTS archive_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    req_no TEXT NOT NULL UNIQUE,
+                    requester TEXT NOT NULL,
+                    unit_code TEXT NOT NULL,
+                    doc_item TEXT NOT NULL,
+                    delivery_type TEXT NOT NULL,
+                    urgency TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'Onay Bekliyor',
+                    notes TEXT,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS request_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    req_no TEXT NOT NULL,
+                    sender TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS archive_audit (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    user TEXT NOT NULL,
+                    action_type TEXT NOT NULL,
+                    details TEXT,
+                    object_id TEXT,
+                    session_id TEXT,
+                    result TEXT DEFAULT 'SUCCESS',
+                    previous_hash TEXT,
+                    event_hash TEXT NOT NULL
+                );
+            """)
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute("INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (1, ?)", (now_str,))
 
+        # Güvenli kolon eklemeleri (Var olanlar korunur, eksikler eklenir)
         ensure_column_exists(conn, "institutions", "active", "INTEGER DEFAULT 1")
         ensure_column_exists(conn, "units", "active", "INTEGER DEFAULT 1")
         ensure_column_exists(conn, "series", "active", "INTEGER DEFAULT 1")
@@ -525,32 +548,15 @@ def execute_migrations() -> None:
         ensure_column_exists(conn, "archive_audit", "previous_hash", "TEXT")
         ensure_column_exists(conn, "archive_audit", "event_hash", "TEXT")
 
-        ensure_column_exists(conn, "request_messages", "req_no", "TEXT")
-        ensure_column_exists(conn, "request_messages", "sender", "TEXT")
-        ensure_column_exists(conn, "request_messages", "message", "TEXT")
-        ensure_column_exists(conn, "request_messages", "created_at", "TEXT")
-
-        cursor.execute("""
-            UPDATE aygaz_main_archive 
-            SET destruction_status = 'BEKLİYOR' 
-            WHERE destruction_status IS NULL 
-               OR UPPER(destruction_status) IN ('EDILMEDI', 'EDİLMEDİ', 'BEKLEMEDE')
-        """)
-
-        cursor.execute("""
-            UPDATE aygaz_main_archive 
-            SET series_code = '9' 
-            WHERE doc_reg_no = '90101' AND (series_code = '6' OR series_code NOT IN (SELECT series_code FROM series))
-        """)
-
+        # İndeksler
         cursor.executescript("""
             CREATE INDEX IF NOT EXISTS idx_archive_search ON aygaz_main_archive (unit_code, series_code, status);
             CREATE INDEX IF NOT EXISTS idx_archive_retention ON aygaz_main_archive (retention_end_year, destruction_status);
             CREATE INDEX IF NOT EXISTS idx_request_queue ON archive_requests (unit_code, status, created_at);
             CREATE INDEX IF NOT EXISTS idx_audit_time ON archive_audit (timestamp);
-            CREATE INDEX IF NOT EXISTS idx_request_messages_req ON request_messages (req_no);
         """)
 
+        # Standart Referans Verileri (Kurumlar, Birimler, Seriler) - Daima güncel tutulur
         cursor.executemany("INSERT OR IGNORE INTO institutions (id, name, code, active) VALUES (?, ?, ?, 1)", [
             (1, "AYGAZ A.Ş.", "10"), (11, "ZİNERJİ A.Ş.", "40"),
             (12, "ANADOLU HİSARI TANKERCİLİK", "30"), (13, "AYGAZ DOĞALGAZ", "20"),
@@ -577,34 +583,34 @@ def execute_migrations() -> None:
             (11, "İŞ SAĞLIĞI VE AMBARLI TEFTİŞ RAPORLARI", "1008", "İŞLETME MÜHENDİSLİK YATIRIMLAR MÜDÜRLÜĞÜ", "11", 15, "6331 Sayılı İSGK", "Rapor Tarihi"),
         ])
 
-        cursor.execute("UPDATE user_permissions SET active = 1 WHERE active IS NULL")
-        cursor.execute("INSERT OR IGNORE INTO user_permissions (id, username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, ?, 1)", 
-                       (1, "local\\admin", "Arşiv Yöneticisi", "ALL", "ADMIN,TALEP_YONETIM,IMHA_TALEP,IMHA_ONAY,DENETIM,LEGAL_HOLD,TANIM_YONETIM,RAPOR_GORUNTULE,ARASIRMA_EXPORT", "Yönetici"))
-        cursor.execute("INSERT OR IGNORE INTO user_permissions (id, username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, ?, 1)", 
-                       (2, "local\\muhasebe_sorumlusu", "Muhasebe Arşiv Yetkilisi", "1004", "TALEP_YONETIM,IMHA_TALEP,RAPOR_GORUNTULE", "Arşiv Personeli"))
+        # 5. Ortam Ayrımı: Demo verileri ve kullanıcılar YALNIZCA DEMO ortamında oluşturulur
+        if ENVIRONMENT == "DEMO":
+            cursor.execute("UPDATE user_permissions SET active = 1 WHERE active IS NULL")
+            cursor.execute("INSERT OR IGNORE INTO user_permissions (id, username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, ?, 1)", 
+                           (1, "local\\admin", "Arşiv Yöneticisi", "ALL", "ADMIN,TALEP_YONETIM,IMHA_TALEP,IMHA_ONAY,DENETIM,LEGAL_HOLD,TANIM_YONETIM,RAPOR_GORUNTULE,ARASIRMA_EXPORT", "Yönetici"))
+            cursor.execute("INSERT OR IGNORE INTO user_permissions (id, username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, ?, 1)", 
+                           (2, "local\\muhasebe_sorumlusu", "Muhasebe Arşiv Yetkilisi", "1004", "TALEP_YONETIM,IMHA_TALEP,RAPOR_GORUNTULE", "Arşiv Personeli"))
 
-        if cursor.execute("SELECT COUNT(*) FROM aygaz_main_archive").fetchone()[0] == 0:
-            cursor.executemany("""
-                INSERT INTO aygaz_main_archive 
-                (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year, classification, legal_hold)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, [
-                ("90101", "1411-23-201", "Bayi faaliyet raporları", "9", "1004", "01/08/2023", "31/08/2023", "23050", "H11.211", "AYGAZ A.Ş.", "Depoda", "BEKLİYOR", 2028, "INTERNAL", 0),
-                ("90102", "1411-23-202", "Ticari bayilik sözleşmeleri", "9", "1004", "01/08/2023", "31/08/2023", "23051", "H11.212", "AYGAZ A.Ş.", "Zimmette", "BEKLİYOR", 2123, "CONFIDENTIAL", 0),
-                ("90085", "1205-22-040", "İSG saha denetim raporları", "11", "1008", "10/05/2022", "15/05/2022", "22910", "H10.014", "AYGAZ A.Ş.", "Depoda", "BEKLİYOR", 2037, "INTERNAL", 0),
-            ])
+            if cursor.execute("SELECT COUNT(*) FROM aygaz_main_archive").fetchone()[0] == 0:
+                cursor.executemany("""
+                    INSERT INTO aygaz_main_archive 
+                    (doc_reg_no, doc_no, doc_name, series_code, unit_code, first_doc_date, last_doc_date, box_no, shelf_no, institution, status, destruction_status, retention_end_year, classification, legal_hold)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, [
+                    ("90101", "1411-23-201", "Bayi faaliyet raporları", "9", "1004", "01/08/2023", "31/08/2023", "23050", "H11.211", "AYGAZ A.Ş.", "Depoda", "BEKLİYOR", 2028, "INTERNAL", 0),
+                    ("90102", "1411-23-202", "Ticari bayilik sözleşmeleri", "9", "1004", "01/08/2023", "31/08/2023", "23051", "H11.212", "AYGAZ A.Ş.", "Zimmette", "BEKLİYOR", 2123, "CONFIDENTIAL", 0),
+                    ("90085", "1205-22-040", "İSG saha denetim raporları", "11", "1008", "10/05/2022", "15/05/2022", "22910", "H10.014", "AYGAZ A.Ş.", "Depoda", "BEKLİYOR", 2037, "INTERNAL", 0),
+                ])
 
-        now_str = suanki_zaman().strftime("%Y-%m-%d %H:%M:%S")
-        cursor.execute("INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (1, ?)", (now_str,))
         conn.commit()
+        logger.info("Veritabanı migration işlemleri başarıyla tamamlandı.")
     except Exception as e:
         conn.rollback()
         logger.critical(f"Kritik Migration Hatası: {e}")
-        st.error("Veritabanı şeması başlatılamadı. Veri bütünlüğünü korumak adına uygulama durduruldu.")
+        st.error("Veritabanı şeması başlatılamadı. Veri bütünlüğünü korumak adına işlem geri alındı.")
         st.stop()
     finally:
         conn.close()
-
 execute_migrations()
 
 # =========================================================
