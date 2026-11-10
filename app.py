@@ -77,7 +77,7 @@ if "last_logged_user" not in st.session_state:
     st.session_state["last_logged_user"] = None
 
 # =========================================================
-# 1. KURUMSAL ARAYÜZ, CSS VE SIDEBAR BUTONU
+# 1. KURUMSAL ARAYÜZ, CSS VE AKILLI SIDEBAR YÖNETİMİ
 # =========================================================
 components.html(
     """
@@ -157,6 +157,23 @@ components.html(
         btn.style.transition = "background-color 0.15s ease";
         btn.onclick = toggleSidebar;
         parentDoc.body.appendChild(btn);
+    }
+
+    // Menüden herhangi bir sayfaya tıklandığında sidebar'ı otomatik kapat
+    const { sidebar } = getNativeSidebarElements();
+    if (sidebar && !sidebar.dataset.collapseListenerAdded) {
+        sidebar.dataset.collapseListenerAdded = "true";
+        sidebar.addEventListener('click', function(e) {
+            const target = e.target.closest('label, input, [role="radio"]');
+            if (target) {
+                setTimeout(() => {
+                    const { collapseBtn } = getNativeSidebarElements();
+                    if (collapseBtn && isSidebarOpen()) {
+                        collapseBtn.click();
+                    }
+                }, 150);
+            }
+        });
     }
 
     updateArrow();
@@ -508,6 +525,11 @@ def execute_migrations() -> None:
         ensure_column_exists(conn, "archive_audit", "previous_hash", "TEXT")
         ensure_column_exists(conn, "archive_audit", "event_hash", "TEXT")
 
+        ensure_column_exists(conn, "request_messages", "req_no", "TEXT")
+        ensure_column_exists(conn, "request_messages", "sender", "TEXT")
+        ensure_column_exists(conn, "request_messages", "message", "TEXT")
+        ensure_column_exists(conn, "request_messages", "created_at", "TEXT")
+
         cursor.execute("""
             UPDATE aygaz_main_archive 
             SET destruction_status = 'BEKLİYOR' 
@@ -515,7 +537,6 @@ def execute_migrations() -> None:
                OR UPPER(destruction_status) IN ('EDILMEDI', 'EDİLMEDİ', 'BEKLEMEDE')
         """)
 
-        # 90101 seed kaydının serisini uyumlu seri 9 ile senkronize et
         cursor.execute("""
             UPDATE aygaz_main_archive 
             SET series_code = '9' 
@@ -527,6 +548,7 @@ def execute_migrations() -> None:
             CREATE INDEX IF NOT EXISTS idx_archive_retention ON aygaz_main_archive (retention_end_year, destruction_status);
             CREATE INDEX IF NOT EXISTS idx_request_queue ON archive_requests (unit_code, status, created_at);
             CREATE INDEX IF NOT EXISTS idx_audit_time ON archive_audit (timestamp);
+            CREATE INDEX IF NOT EXISTS idx_request_messages_req ON request_messages (req_no);
         """)
 
         cursor.executemany("INSERT OR IGNORE INTO institutions (id, name, code, active) VALUES (?, ?, ?, 1)", [
@@ -890,13 +912,13 @@ with st.sidebar:
     st.caption(f"{active_row['role_desc']} · {active_unit}")
     st.markdown("---")
 
-    menu_options = ["Katalog", "İşlem Kuyruğu"]
+    menu_options = ["Katalog", "Arşiv Talepleri"]
     if can_manage_definitions(active_row):
         menu_options.append("Tanımlar")
     if can_manage_destruction(active_row):
         menu_options.append("Saklama ve imha")
     if can_view_reports(active_row):
-        menu_options.append("Günlükler")
+        menu_options.append("Denetim İzleri")
     if can_view_audit(active_row):
         menu_options.append("Denetim izi")
 
@@ -1282,10 +1304,10 @@ if menu == "Katalog":
                 conn.close()
 
 # =========================================================
-# 10. MENÜ: İŞLEM KUYRUĞU (GEÇİŞ MATRİSİ KONTROLLÜ)
+# 10. MENÜ: ARŞİV TALEPLERİ (ESKİ İŞLEM KUYRUĞU)
 # =========================================================
-elif menu == "İşlem Kuyruğu":
-    header("İşlem kuyruğu", "Arşiv belgelerine yönelik erişim taleplerini, zimmet ve iade hareketlerini takip et ve yönet.")
+elif menu == "Arşiv Talepleri":
+    header("Arşiv talepleri", "Arşiv belgelerine yönelik erişim taleplerini, zimmet ve iade hareketlerini takip et ve yönet.")
     can_manage = can_manage_requests(active_row)
     
     filter_sql = ""
@@ -1716,10 +1738,10 @@ elif menu == "Saklama ve imha" and can_manage_destruction(active_row):
             st.info(f"{CURRENT_YEAR} yılı için yetki kapsamınızda imha edilmiş bir belge kaydı bulunmuyor.")
 
 # =========================================================
-# 13. MENÜ: GÜNLÜKLER (YÖNETİM RAPORLARI)
+# 13. MENÜ: DENETİM İZLERİ (ESKİ GÜNLÜKLER)
 # =========================================================
-elif menu == "Günlükler" and can_view_reports(active_row):
-    header("Yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
+elif menu == "Denetim İzleri" and can_view_reports(active_row):
+    header("Denetim izleri ve yönetim raporları", "Arşiv hacmini, iş yükünü ve saklama riskini tek bakışta değerlendir.")
     
     rep_unit_sql = " WHERE unit_code = ?" if active_unit != "ALL" else ""
     rep_unit_params: list[Any] = [CURRENT_YEAR]
