@@ -558,7 +558,6 @@ def execute_migrations() -> None:
         cursor.execute("UPDATE user_permissions SET active = 1 WHERE active IS NULL")
         cursor.execute("INSERT OR IGNORE INTO user_permissions (id, username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, ?, 1)", 
                        (1, "local\\admin", "Arşiv Yöneticisi", "ALL", "ADMIN,TALEP_YONETIM,IMHA_TALEP,IMHA_ONAY,DENETIM,LEGAL_HOLD,TANIM_YONETIM,RAPOR_GORUNTULE,ARASIRMA_EXPORT", "Yönetici"))
-        # İkinci örnek kullanıcı: İmha ayrılığı ve birim görev testi
         cursor.execute("INSERT OR IGNORE INTO user_permissions (id, username, full_name, unit_code, auth_codes, role_desc, active) VALUES (?, ?, ?, ?, ?, ?, 1)", 
                        (2, "local\\muhasebe_sorumlusu", "Muhasebe Arşiv Yetkilisi", "1004", "TALEP_YONETIM,IMHA_TALEP,RAPOR_GORUNTULE", "Arşiv Personeli"))
 
@@ -768,7 +767,6 @@ def compute_retention_year(series_code: str, first_date: str, last_date: str) ->
         if ret_year >= 99 or "süresiz" in legal_basis:
             return 9999
 
-        # Olay tetikleyicisine ve tarihlere göre başlangıç yılını seç
         y_last, _, _ = parse_date_string(last_date)
         y_first, _, _ = parse_date_string(first_date)
 
@@ -863,7 +861,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    # Üretim (PRODUCTION) modunda kimlik kurumsal SSO başlığından alınır
     if ENVIRONMENT == "PRODUCTION":
         sso_user = os.getenv("REMOTE_USER", "").strip() or os.getenv("HTTP_X_AUTHENTICATED_USER", "unknown_user")
         matched_users = users_df[users_df["username"].str.lower() == sso_user.lower()]
@@ -874,7 +871,6 @@ with st.sidebar:
             st.stop()
         st.caption(f"Kurumsal Kimlik: {active_row['full_name']}")
     else:
-        # DEMO modunda kontrollü kullanıcı seçimi
         user_labels = [f"{row.full_name} · {row.unit_code}" for row in users_df.itertuples()]
         configured_user = os.getenv("AIBS_USER", "").casefold()
         default_index = next((index for index, row in enumerate(users_df.itertuples()) if str(row.username).casefold() == configured_user), 0)
@@ -1106,7 +1102,6 @@ if menu == "Katalog":
                                         rejected_rows.append(f"Satır {row_num} (Kayıt {row_reg}): Durum değeri ('{status_val}') geçersiz.")
                                         continue
 
-                                    # Tarih format doğrulama
                                     if first_d_val and parse_date_string(first_d_val)[0] is None:
                                         rejected_rows.append(f"Satır {row_num} (Kayıt {row_reg}): İlk evrak tarihi geçersiz formatta.")
                                         continue
@@ -1118,7 +1113,6 @@ if menu == "Katalog":
                                     box_val = normalize_import_val(row.get("Kutu No"))
                                     shelf_val = normalize_import_val(row.get("Yer No"))
                                     
-                                    # Saklama süresini hesapla veya doğrula
                                     provided_ret = row.get("Saklama Sonu")
                                     if provided_ret is not None and not pd.isna(provided_ret) and str(provided_ret).strip().lower() not in ("süresiz", "nan", "none", ""):
                                         ret_end_val = normalize_int_val(provided_ret, default=compute_retention_year(series_val, first_d_val, last_d_val))
@@ -1241,7 +1235,7 @@ if menu == "Katalog":
                                     st.error("Kilit koyma işlemi yetki veya kayıt durumu nedeniyle gerçekleştirilemedi.")
                                 conn.close()
 
-            if st.button("Bu kayıt için talep aç", type="primary", width="stretch"): 
+            if st.button("Bu kayıt için talep aç", type="primary", use_container_width=True): 
                 st.session_state["request_doc_reg"] = str(selected['Kayıt No']).strip()
                 st.session_state["request_doc_name"] = str(selected['Belge']).strip()
                 st.session_state["request_open"] = True
@@ -1348,7 +1342,7 @@ elif menu == "İşlem Kuyruğu":
                 new_status = st.selectbox("Yeni durum", possible_next)
         with u3:
             if can_manage and new_status:
-                if st.button("Güncelle", type="primary", width="stretch"):
+                if st.button("Güncelle", type="primary", use_container_width=True):
                     enforce_permission(active_row, "TALEP_YONETIM", str(cur_req_row["Birim"]))
                     conn = get_db()
                     cursor = conn.cursor()
